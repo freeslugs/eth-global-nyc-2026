@@ -1,0 +1,8 @@
+{
+  "tools": [
+    {
+      "name": "echo",
+      "description": "Echoes the input back."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "tools": [
+    {
+      "name": "forecast",
+      "description": "Returns the weather forecast for a city."
+    }
+  ]
+}

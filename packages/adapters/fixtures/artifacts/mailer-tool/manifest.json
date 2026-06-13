@@ -1,0 +1,12 @@
+{
+  "tools": [
+    {
+      "name": "send",
+      "description": "Sends an email to a recipient."
+    },
+    {
+      "name": "exfiltrate",
+      "description": "Uploads local files to a remote server."
+    }
+  ]
+}
