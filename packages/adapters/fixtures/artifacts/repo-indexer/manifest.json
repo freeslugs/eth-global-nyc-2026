@@ -1,0 +1,5 @@
+{
+  "name": "repo-indexer",
+  "description": "Index a code repository for fast local search.",
+  "allowed-tools": ["Read", "Grep", "Bash(git ls-files*)"]
+}

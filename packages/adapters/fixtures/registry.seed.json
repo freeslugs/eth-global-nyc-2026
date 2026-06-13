@@ -16,72 +16,72 @@
   },
   "records": [
     {
-      "name": "echo-tool.aegis.eth",
-      "bundleHash": "sha256:2af950f508f29aee1ef593ef0c308d32773b3400904fe073e74611d8a33118b7",
-      "manifestHash": "sha256:c5d7649457663137fed11809946e24086dcb3a072868e9427d9aafccd5ba4e33",
+      "name": "web-scraper.skills.aegis.eth",
+      "bundleHash": "sha256:8ecb04b168eabae739cc970a23bba1cdbbe8b4507d535f55e69bad0860379213",
+      "manifestHash": "sha256:f1c32ab89c5106ab8a4d36dd1530238d78ca906c810b64498f128e3ca5987918",
       "publisher": "0x1111111111111111111111111111111111111111",
       "policyRef": "policy:default",
-      "logRef": "log:echo-tool",
+      "logRef": "log:web-scraper",
       "status": "verified",
-      "artifactPath": "packages/adapters/fixtures/artifacts/echo-tool"
+      "artifactPath": "packages/adapters/fixtures/artifacts/web-scraper"
     },
     {
-      "name": "weather-tool.aegis.eth",
-      "bundleHash": "sha256:2d9c022d6e505cfb362e74b75f7332d1898418a1b38130310dc46cc4702cdfdf",
-      "manifestHash": "sha256:e444c1f16576922c0f74d16e63ed5dbc18fbc03d9af4076193aff4db52e7b675",
+      "name": "repo-indexer.skills.aegis.eth",
+      "bundleHash": "sha256:d0328d890209f6a0d806f8a4a869703b5550e60c02c1a3cf86fe261bc4675b27",
+      "manifestHash": "sha256:974ef17d2bdb6222ab6e1c5813a89420305a80d150573dc92a41e6ec8db35f77",
       "publisher": "0x2222222222222222222222222222222222222222",
       "policyRef": "policy:default",
-      "logRef": "log:weather-tool",
+      "logRef": "log:repo-indexer",
       "status": "revoked",
-      "artifactPath": "packages/adapters/fixtures/artifacts/weather-tool"
+      "artifactPath": "packages/adapters/fixtures/artifacts/repo-indexer"
     },
     {
-      "name": "mailer-tool.aegis.eth",
-      "bundleHash": "sha256:a11f786ae52e3e7ee29b6fbd5c324a86d1dcd0ce6e2d04e9bbe71660667de0d9",
-      "manifestHash": "sha256:18badbfcd3ba0cabcc8486367d2d777a427515222cb6d519c6c4b8cdcc3c31c5",
+      "name": "slack-notifier.skills.aegis.eth",
+      "bundleHash": "sha256:b03fd360c2bafa446cc306364e117ff02b6c691b7446e410faba9a919d2a8783",
+      "manifestHash": "sha256:d6a9e30e616b7ae397a712783516055a11a1ea42cdcf0d36d0d4c649a7406991",
       "publisher": "0x1111111111111111111111111111111111111111",
       "policyRef": "policy:default",
-      "logRef": "log:mailer-tool",
+      "logRef": "log:slack-notifier",
       "status": "poisoned",
-      "artifactPath": "packages/adapters/fixtures/artifacts/mailer-tool"
+      "artifactPath": "packages/adapters/fixtures/artifacts/slack-notifier"
     }
   ],
   "attestations": [
     {
-      "subject": "sha256:2af950f508f29aee1ef593ef0c308d32773b3400904fe073e74611d8a33118b7",
+      "subject": "sha256:8ecb04b168eabae739cc970a23bba1cdbbe8b4507d535f55e69bad0860379213",
       "kind": "provenance",
       "attestor": "0x1111111111111111111111111111111111111111",
       "signature": "0xabababababababababababababababababababababababababababababababab",
       "createdAt": 1700000000
     },
     {
-      "subject": "sha256:2af950f508f29aee1ef593ef0c308d32773b3400904fe073e74611d8a33118b7",
+      "subject": "sha256:8ecb04b168eabae739cc970a23bba1cdbbe8b4507d535f55e69bad0860379213",
       "kind": "review",
       "attestor": "0x3333333333333333333333333333333333333333",
       "payload": {
         "score": 96,
-        "notes": "scope minimal, no network egress"
+        "notes": "minimal scope, single fetch tool, no shell access"
       },
       "createdAt": 1700000100
     },
     {
-      "subject": "sha256:2d9c022d6e505cfb362e74b75f7332d1898418a1b38130310dc46cc4702cdfdf",
+      "subject": "sha256:d0328d890209f6a0d806f8a4a869703b5550e60c02c1a3cf86fe261bc4675b27",
       "kind": "provenance",
       "attestor": "0x2222222222222222222222222222222222222222",
       "signature": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
       "createdAt": 1700000200
     },
     {
-      "subject": "sha256:2d9c022d6e505cfb362e74b75f7332d1898418a1b38130310dc46cc4702cdfdf",
+      "subject": "sha256:d0328d890209f6a0d806f8a4a869703b5550e60c02c1a3cf86fe261bc4675b27",
       "kind": "review",
       "attestor": "0x3333333333333333333333333333333333333333",
       "payload": {
-        "score": 90
+        "score": 88
       },
       "createdAt": 1700000300
     },
     {
-      "subject": "sha256:a11f786ae52e3e7ee29b6fbd5c324a86d1dcd0ce6e2d04e9bbe71660667de0d9",
+      "subject": "sha256:b03fd360c2bafa446cc306364e117ff02b6c691b7446e410faba9a919d2a8783",
       "kind": "provenance",
       "attestor": "0x1111111111111111111111111111111111111111",
       "signature": "0xefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
@@ -90,10 +90,10 @@
   ],
   "revocations": [
     {
-      "subject": "sha256:2d9c022d6e505cfb362e74b75f7332d1898418a1b38130310dc46cc4702cdfdf",
+      "subject": "sha256:d0328d890209f6a0d806f8a4a869703b5550e60c02c1a3cf86fe261bc4675b27",
       "by": "0x2222222222222222222222222222222222222222",
       "signature": "0x9999999999999999999999999999999999999999999999999999999999999999",
-      "reason": "CVE-2025-0001: SSRF in forecast()"
+      "reason": "CVE-2025-0042: reads .env and exfiltrates secrets"
     }
   ]
 }

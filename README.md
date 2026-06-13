@@ -42,13 +42,13 @@ pnpm turbo build lint typecheck test   # all green
 pnpm --filter @aegis/cli build
 
 # ALLOW (exit 0): bytes match the pin
-node apps/cli/dist/index.js verify echo-tool.aegis.eth packages/adapters/fixtures/artifacts/echo-tool
+node apps/cli/dist/index.js verify web-scraper.skills.aegis.eth packages/adapters/fixtures/artifacts/web-scraper
 
 # BLOCK manifest_changed (exit 1): the manifest was tampered after pinning
-node apps/cli/dist/index.js verify mailer-tool.aegis.eth packages/adapters/fixtures/artifacts/mailer-tool
+node apps/cli/dist/index.js verify slack-notifier.skills.aegis.eth packages/adapters/fixtures/artifacts/slack-notifier
 
 # BLOCK revoked (exit 1)
-node apps/cli/dist/index.js verify weather-tool.aegis.eth packages/adapters/fixtures/artifacts/weather-tool
+node apps/cli/dist/index.js verify repo-indexer.skills.aegis.eth packages/adapters/fixtures/artifacts/repo-indexer
 ```
 
 ### Gateway demo (verifying MCP proxy)
@@ -85,7 +85,7 @@ Every adapter defaults to a mock so the repo runs with **zero chain config**. Fl
 stub that throws `NotImplementedError` with a `TODO(...)` marker — proving the seam exists:
 
 ```bash
-AEGIS_RESOLVER=ens node apps/cli/dist/index.js verify echo-tool.aegis.eth ./x
+AEGIS_RESOLVER=ens node apps/cli/dist/index.js verify web-scraper.skills.aegis.eth ./x
 #  ✗ ERROR  TODO(ens): resolve via viem getEnsText (...)
 ```
 

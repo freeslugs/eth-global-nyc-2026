@@ -27,19 +27,19 @@ async function runVerify(name: string) {
 }
 
 describe("buildAdapters (mock defaults)", () => {
-  it("ALLOWs the verified seeded artifact", async () => {
-    const result = await runVerify("echo-tool.aegis.eth");
+  it("ALLOWs the verified seeded skill", async () => {
+    const result = await runVerify("web-scraper.skills.aegis.eth");
     expect(result).toEqual({ ok: true });
   });
 
-  it("BLOCKs the poisoned artifact with manifest_changed", async () => {
-    const result = await runVerify("mailer-tool.aegis.eth");
+  it("BLOCKs the poisoned skill with manifest_changed", async () => {
+    const result = await runVerify("slack-notifier.skills.aegis.eth");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("manifest_changed");
   });
 
-  it("BLOCKs the revoked artifact with revoked", async () => {
-    const result = await runVerify("weather-tool.aegis.eth");
+  it("BLOCKs the revoked skill with revoked", async () => {
+    const result = await runVerify("repo-indexer.skills.aegis.eth");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("revoked");
   });

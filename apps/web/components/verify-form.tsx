@@ -70,7 +70,7 @@ export function VerifyForm({ names }: { names: { name: string; status: string }[
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full rounded-md border bg-background px-3 py-2 font-mono text-sm"
-                placeholder="pdf-export.skills.aegis.eth"
+                placeholder="web-scraper.skills.aegis.eth"
               />
             </label>
             <label className="block space-y-1 text-sm">
@@ -106,7 +106,7 @@ export function VerifyForm({ names }: { names: { name: string; status: string }[
                   disabled={pending}
                   onClick={() => verifyFixture(n.name)}
                 >
-                  {n.name.replace(".aegis.eth", "")}
+                  {n.name.replace(".skills.aegis.eth", "")}
                   <Badge variant={statusVariant(n.status)}>{n.status}</Badge>
                 </Button>
               ))}

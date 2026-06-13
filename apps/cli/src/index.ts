@@ -17,7 +17,7 @@ const enc = (s: string): Uint8Array => new TextEncoder().encode(s);
 program
   .command("verify")
   .description("Resolve a name, fetch the artifact, re-hash it, and ALLOW or BLOCK.")
-  .argument("<name>", "human-readable artifact name (e.g. echo-tool.aegis.eth)")
+  .argument("<name>", "human-readable skill name (e.g. web-scraper.skills.aegis.eth)")
   .argument("<path>", "path to the artifact dir (contains bundle.js + manifest.json)")
   .action(async (name: string, path: string) => {
     const a = buildAdapters();
