@@ -8,10 +8,10 @@ export default function VerifyPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-12">
       <section className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Verify</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Verify a skill</h1>
         <p className="max-w-2xl text-muted-foreground">
-          Resolve a pinned name, re-hash the real bytes, and get an ALLOW or BLOCK verdict. Upload a
-          bundle + manifest, or one-click a seeded fixture below.
+          Resolve a skill&apos;s pinned ENS name, re-hash the real bytes, and get an ALLOW or BLOCK
+          verdict. Upload a skill&apos;s body + frontmatter, or one-click a seeded skill below.
         </p>
       </section>
       <VerifyForm names={seededNames()} />

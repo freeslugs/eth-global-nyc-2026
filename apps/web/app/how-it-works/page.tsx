@@ -4,37 +4,37 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "How it works — Aegis",
   description:
-    "Every artifact travels one tamper-proof path: hashed, signed on Ledger, anchored on-chain via Chainlink CRE, resolvable by ENS name.",
+    "Every agent skill travels one tamper-proof path: named on ENS, evaluated by a trustless AI attestor on Chainlink CRE, gated by your Ledger, and re-verified before it runs.",
 };
 
 const PIPELINE = [
-  { title: "Artifact", sub: "raw source", tone: "default" },
-  { title: "Hash", sub: "fingerprint", tone: "default" },
-  { title: "Ledger sign", sub: "hardware key", tone: "default" },
-  { title: "Chainlink CRE", sub: "anchor on-chain", tone: "ink" },
-  { title: "ENS verified", sub: "name.aegis.eth", tone: "accent" },
+  { title: "Skill", sub: "Markdown at a URL", tone: "default" },
+  { title: "Hash", sub: "content fingerprint", tone: "default" },
+  { title: "AI attestor", sub: "Chainlink CRE", tone: "ink" },
+  { title: "Ledger policy", sub: "you approve", tone: "default" },
+  { title: "ENS verified", sub: "name.skills.aegis.eth", tone: "accent" },
 ];
 
 const STAGES = [
   {
     n: "01",
-    title: "Hash & sign",
-    body: "The bundle and manifest are fingerprinted separately and signed by a Ledger device — the trust key never touches the network.",
+    title: "Hash the skill",
+    body: "A skill is a Markdown file at a URL. Aegis fingerprints it into a single content hash — change one character and the hash moves.",
   },
   {
     n: "02",
-    title: "Chainlink CRE workflow",
-    body: "A CRE workflow validates the signature and writes the pinned record on-chain, automatically and verifiably.",
+    title: "AI attestor on Chainlink CRE",
+    body: "A trustless AI evaluator runs inside Chainlink CRE, scores the skill for prompt injection and capability over-reach, and posts a signed verdict on-chain — no party you have to trust.",
   },
   {
     n: "03",
-    title: "ENS naming",
-    body: "Each artifact gets a human-readable ENS name — anyone can resolve it and look up its full provenance history.",
+    title: "Policy & bypass on Ledger",
+    body: "You set what skills may do. Approvals and emergency bypasses are signed on your Ledger — every override is hardware-signed, time-boxed, and auditable.",
   },
   {
     n: "04",
-    title: "Verify at runtime",
-    body: "Before execution, the verifier re-hashes the real bytes and checks them against the chain. Any mismatch is blocked.",
+    title: "Verify before it runs",
+    body: "Before the agent loads a skill, the verifier re-hashes the live Markdown, checks the ENS pin and the attestor verdict, and blocks any mismatch.",
   },
 ];
 
@@ -63,11 +63,11 @@ export default function HowItWorksPage() {
           The trust pipeline
         </div>
         <h1 className="mx-auto max-w-3xl font-display text-5xl font-semibold leading-[1.04] tracking-[-0.025em] sm:text-6xl">
-          From raw artifact to verified execution.
+          From Markdown skill to verified execution.
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-[#57534e]">
-          Every npm package and MCP server travels one tamper-proof path — signed by hardware,
-          anchored on-chain, resolvable by name.
+          Every agent skill travels one tamper-proof path — named on ENS, evaluated by a trustless
+          AI attestor, gated by your Ledger.
         </p>
 
         <div className="mt-12 flex items-center justify-center gap-0 overflow-x-auto pb-2">
@@ -121,10 +121,10 @@ export default function HowItWorksPage() {
           Why the pipeline matters
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-[#78716c]">
-          Without it, a single swapped artifact hijacks the agent — silently, with no trace.
+          Without it, a single edited skill hijacks the agent — silently, with no trace.
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
-          {["supply-chain swap", "manifest poisoning", "no audit trail"].map((x) => (
+          {["skill swap", "frontmatter poisoning", "no audit trail"].map((x) => (
             <span
               key={x}
               className="rounded-full border border-[#f1c9c9] bg-[#fef5f5] px-4 py-1.5 text-sm text-[#dc2626]"
@@ -138,7 +138,7 @@ export default function HowItWorksPage() {
       {/* footer CTA */}
       <section className="bg-mint px-6 py-20 text-center">
         <h2 className="font-display text-4xl font-semibold tracking-[-0.02em]">
-          Put your artifacts on the pipeline.
+          Put your skills on the pipeline.
         </h2>
         <Link
           href="/verify"

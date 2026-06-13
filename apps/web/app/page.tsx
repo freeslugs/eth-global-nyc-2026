@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getRegistry } from "@/lib/registry.server";
 import { shortHash } from "@/lib/utils";
+import { ArchitectureDiagram } from "@/components/architecture-diagram";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,38 +9,38 @@ export const dynamic = "force-dynamic";
 const STEPS = [
   {
     n: "01",
-    title: "Hash the artifact",
-    body: "Deterministic fingerprint of every byte — bundle and manifest hashed separately.",
+    title: "Name on ENS",
+    body: "Each skill gets a human-readable ENS name that pins the exact content hash of its Markdown.",
   },
   {
     n: "02",
-    title: "Sign on Ledger",
-    body: "A hardware key approves the pin — the trust key never leaves the device.",
+    title: "Attest via Chainlink CRE",
+    body: "A trustless AI attestor runs inside Chainlink CRE and posts a signed safety verdict on-chain.",
   },
   {
     n: "03",
-    title: "Anchor via Chainlink CRE",
-    body: "A CRE workflow validates the signature and writes the record on-chain.",
+    title: "Gate on Ledger",
+    body: "You set what skills may do. Approvals and emergency bypasses are signed on your hardware device.",
   },
   {
     n: "04",
-    title: "Resolve via ENS",
-    body: "Human-readable names anyone can resolve, audit, and re-verify.",
+    title: "Verify before it runs",
+    body: "The verifier re-hashes the live skill and checks it against the chain. Any mismatch is blocked.",
   },
 ];
 
 const THREATS = [
   {
-    title: "Supply-chain swap",
-    body: "A stolen npm token or dependency silently replaces a trusted release.",
+    title: "Skill swap",
+    body: "A skill's Markdown is silently edited at its URL — new content, no alert.",
   },
   {
-    title: "Manifest poisoning",
-    body: "MCP tool descriptors are rewritten to redirect what your agent calls.",
+    title: "Frontmatter poisoning",
+    body: "A skill's allowed-tools is rewritten to grant capabilities it was never trusted with.",
   },
   {
     title: "No audit trail",
-    body: "No way to prove what actually ran, or who approved the version.",
+    body: "No way to prove which version of a skill actually ran, or who approved it.",
   },
 ];
 
@@ -59,14 +60,14 @@ export default async function HomePage() {
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_.95fr]">
           <div>
             <div className="mb-4 text-[13px] uppercase tracking-[0.04em] text-accent">
-              Integrity for third-party code
+              Integrity for agent skills
             </div>
             <h1 className="font-display text-5xl font-semibold leading-[1.03] tracking-[-0.025em] sm:text-6xl">
-              Verify every package before it runs.
+              Verify every skill before it runs.
             </h1>
             <p className="mt-5 max-w-md text-lg leading-relaxed text-[#57534e]">
-              Cryptographic integrity for npm packages and MCP servers — hashed, signed on Ledger,
-              anchored on-chain via Chainlink CRE, and named with ENS.
+              Cryptographic integrity for agent skills — each named on ENS, evaluated by a trustless
+              AI attestor on Chainlink CRE, and gated by policies you approve on your Ledger.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
@@ -84,20 +85,20 @@ export default async function HomePage() {
             </div>
             <div className="mt-8 rounded-[10px] bg-ink px-5 py-4 font-mono text-[13px] leading-[1.9] text-mint">
               <div className="text-[#78716c]">$ npm i @aegis/cli</div>
-              <div>$ aegis verify ./node_modules/some-pkg</div>
+              <div>$ aegis verify pdf-export.skills.aegis.eth</div>
             </div>
           </div>
 
           {/* terminal mock */}
           <div className="rounded-xl bg-night p-6 font-mono text-[13px] leading-[1.95] text-[#e7e5e4] shadow-2xl">
-            <div className="text-[#78716c]">$ aegis verify echo-tool.aegis.eth</div>
-            <div className="text-[#34d399]">✓ hash matches on-chain pin</div>
-            <div className="text-[#34d399]">✓ provenance signed · ledger:0x9f…21a</div>
-            <div className="text-[#34d399]">✓ ens · echo-tool.aegis.eth</div>
-            <div className="text-mint">PASS — safe to execute</div>
+            <div className="text-[#78716c]">$ aegis verify pdf-export.skills.aegis.eth</div>
+            <div className="text-[#34d399]">✓ content hash matches ENS pin</div>
+            <div className="text-[#34d399]">✓ AI attestor: safe · chainlink CRE</div>
+            <div className="text-[#34d399]">✓ policy ok · ledger:0x9f…21a</div>
+            <div className="text-mint">PASS — safe to load</div>
             <div className="h-4" />
-            <div className="text-[#78716c]">$ aegis verify mailer-tool.aegis.eth</div>
-            <div className="text-[#f87171]">✗ manifest changed since signing</div>
+            <div className="text-[#78716c]">$ aegis verify repo-indexer.skills.aegis.eth</div>
+            <div className="text-[#f87171]">✗ skill modified since attestation</div>
             <div className="text-[#fca5a5]">BLOCKED — execution halted</div>
           </div>
         </div>
@@ -107,11 +108,11 @@ export default async function HomePage() {
       <section className="bg-night px-6 py-20 text-[#fafaf9]">
         <div className="mx-auto max-w-6xl">
           <h2 className="text-center font-display text-3xl font-semibold tracking-[-0.01em] sm:text-4xl">
-            A poisoned dependency is a hijacked agent.
+            A poisoned skill is a hijacked agent.
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-center text-[#a8a29e]">
-            Packages and MCP servers are code your agent trusts blindly. Tamper with one and you own
-            the agent.
+            Skills are instructions your agent follows blindly. Tamper with one and you own the
+            agent.
           </p>
           <div className="mx-auto mt-10 grid max-w-4xl gap-px overflow-hidden rounded-xl border border-[#2a2520] bg-[#2a2520] sm:grid-cols-3">
             {THREATS.map((t) => (
@@ -130,7 +131,7 @@ export default async function HomePage() {
           How it works
         </h2>
         <p className="mt-2 text-center text-[#78716c]">
-          Four steps from raw artifact to verifiable execution.
+          Four steps from a Markdown skill to verifiable execution.
         </p>
         <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((s) => (
@@ -143,19 +144,38 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* ===== ARCHITECTURE DIAGRAM ===== */}
+      <section id="architecture" className="mx-auto max-w-6xl scroll-mt-24 px-6 pb-20">
+        <div className="mb-7 text-center">
+          <div className="mb-2 text-[13px] uppercase tracking-[0.04em] text-accent">
+            The architecture
+          </div>
+          <h2 className="font-display text-3xl font-semibold tracking-[-0.01em]">
+            One pipeline, public and private skills.
+          </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-[#78716c]">
+            A Chainlink CRE workflow reviews each skill inside a TEE and writes a verifiable verdict
+            on-chain — private code never leaves the enclave.
+          </p>
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-[#e7e5e1] bg-white p-5 sm:p-8">
+          <ArchitectureDiagram />
+        </div>
+      </section>
+
       {/* ===== LIVE REGISTRY (real data) ===== */}
       <section className="mx-auto max-w-6xl px-6 pb-20">
         <div className="overflow-hidden rounded-2xl border border-[#e7e5e1] bg-white">
           <div className="flex flex-wrap items-center gap-3 border-b border-[#f0eee9] px-6 py-5">
             <span className="font-display text-lg font-semibold">Live registry</span>
             <span className="text-sm text-[#78716c]">
-              — verify any artifact against its on-chain record
+              — resolve any skill and re-verify it against its on-chain record
             </span>
             <Link
               href="/verify"
               className="ml-auto rounded-full border border-[#e7e5e1] px-3.5 py-1.5 font-mono text-xs text-[#78716c] transition-colors hover:border-ink hover:text-ink"
             >
-              search aegis.eth →
+              search skills.aegis.eth →
             </Link>
           </div>
           <div>
@@ -194,7 +214,7 @@ export default async function HomePage() {
           Built on tools you trust
         </h2>
         <div className="mt-7 flex flex-wrap justify-center gap-8 text-base text-[#57534e]">
-          {["Chainlink CRE", "ENS", "Ledger", "npm", "MCP", "CLI"].map((x) => (
+          {["Chainlink CRE", "ENS", "Ledger", "Agent Skills", "AI Attestor", "CLI"].map((x) => (
             <span key={x}>{x}</span>
           ))}
         </div>
