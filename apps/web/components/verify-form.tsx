@@ -59,7 +59,7 @@ export function VerifyForm({ names }: { names: { name: string; status: string }[
     <div className="grid gap-6 md:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>Upload an artifact</CardTitle>
+          <CardTitle>Verify a skill</CardTitle>
         </CardHeader>
         <CardContent>
           <form ref={formRef} onSubmit={onSubmit} className="space-y-4">
@@ -70,7 +70,7 @@ export function VerifyForm({ names }: { names: { name: string; status: string }[
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full rounded-md border bg-background px-3 py-2 font-mono text-sm"
-                placeholder="echo-tool.aegis.eth"
+                placeholder="pdf-export.skills.aegis.eth"
               />
             </label>
             <label className="block space-y-1 text-sm">
@@ -95,7 +95,7 @@ export function VerifyForm({ names }: { names: { name: string; status: string }[
           </form>
 
           <div className="mt-6 space-y-2 border-t pt-4">
-            <p className="text-xs text-muted-foreground">Or verify a seeded fixture:</p>
+            <p className="text-xs text-muted-foreground">Or verify a seeded skill:</p>
             <div className="flex flex-wrap gap-2">
               {names.map((n) => (
                 <Button
@@ -144,7 +144,7 @@ function ResultPanel({ data }: { data: VerifyResponse }) {
         )}
       >
         {ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-        {ok ? "ALLOW — artifact matches its pinned release" : `BLOCK — ${data.result.reason}`}
+        {ok ? "ALLOW — skill matches its pinned release" : `BLOCK — ${data.result.reason}`}
       </div>
       {!ok && data.result.detail && (
         <p className="font-mono text-xs text-muted-foreground">{data.result.detail}</p>

@@ -21,9 +21,9 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aegis — verify every package before it runs",
+  title: "Aegis — verify every skill before it runs",
   description:
-    "Cryptographic integrity for npm packages and MCP servers — hashed, signed on Ledger, anchored on-chain via Chainlink CRE, and named with ENS.",
+    "Cryptographic integrity for agent skills — each named on ENS, evaluated by a trustless AI attestor on Chainlink CRE, and gated by policies you approve on your Ledger.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -72,7 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <footer className="border-t border-[#e7e5e1] bg-white">
             <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-[#78716c] sm:flex-row">
               <span className="font-display font-bold text-ink">◇ Aegis</span>
-              <span>Hash · Sign on Ledger · Anchor via Chainlink CRE · Resolve on ENS</span>
+              <span>Name on ENS · Attest via Chainlink CRE · Gate on Ledger · Verify before run</span>
               <span>ETHGlobal NYC 2026</span>
             </div>
           </footer>
