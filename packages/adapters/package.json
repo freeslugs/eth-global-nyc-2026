@@ -18,7 +18,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "gen:fixtures": "node scripts/generate-fixtures.mjs"
+    "gen:fixtures": "node scripts/generate-fixtures.js"
   },
   "dependencies": {
     "@aegis/chain": "workspace:*",

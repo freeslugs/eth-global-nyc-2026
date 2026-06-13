@@ -5,7 +5,7 @@
   "description": "Aegis — trust check that runs before an AI agent or developer executes third-party code.",
   "packageManager": "pnpm@10.18.2",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "pnpm": {
     "onlyBuiltDependencies": ["esbuild"]

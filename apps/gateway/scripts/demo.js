@@ -20,7 +20,7 @@ const run = (label, args) => {
   return r.status;
 };
 
-const swap = (args) => spawnSync("node", [join(here, "swap-poison.mjs"), ...args], { stdio: "inherit" });
+const swap = (args) => spawnSync("node", [join(here, "swap-poison.js"), ...args], { stdio: "inherit" });
 
 swap(["--restore"]); // ensure pristine
 const passExit = run("PRISTINE upstream (expect ALLOW, exit 0)", []);
