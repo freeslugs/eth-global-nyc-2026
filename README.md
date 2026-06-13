@@ -31,7 +31,7 @@ nothing with I/O (only `@noble/hashes`).
 ## Quick start
 
 ```bash
-nvm use            # Node >= 20
+nvm use            # Node >= 24
 pnpm install
 pnpm turbo build lint typecheck test   # all green
 ```
@@ -58,11 +58,18 @@ pnpm --filter @aegis/gateway build
 pnpm --filter @aegis/gateway demo   # PASS (wraps the echo upstream), then BLOCK on a poisoned manifest
 ```
 
-### Web explorer
+### Web explorer (deployed at [eth-global-nyc-2026.vercel.app](https://eth-global-nyc-2026.vercel.app))
 
 ```bash
 pnpm --filter web dev   # http://localhost:3000  — registry, artifact detail, /verify
 ```
+
+To deploy the web app to Vercel:
+
+1. Push to `main` (auto-deploys via git integration)
+2. Or run locally: `vercel build && vercel deploy --prebuilt`
+
+Requires the Vercel project's **Root Directory** set to `apps/web` in the dashboard for optimal Turborepo support.
 
 ### Contracts
 
