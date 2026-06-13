@@ -1,0 +1,7 @@
+{
+  "name": "@aegis/contracts",
+  "private": true,
+  "scripts": {
+    "test": "forge test"
+  }
+}
