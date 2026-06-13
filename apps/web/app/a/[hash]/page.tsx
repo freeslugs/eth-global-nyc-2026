@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getEntryByHash } from "@/lib/registry.server";
+import { getEntryByPin } from "@/lib/registry.server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, statusVariant } from "@/components/ui/badge";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export default async function ArtifactPage({ params }: { params: Promise<{ hash: string }> }) {
+export default async function SkillPage({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = await params;
-  const entry = await getEntryByHash(decodeURIComponent(hash));
+  const entry = await getEntryByPin(decodeURIComponent(hash));
   if (!entry) notFound();
-  const { record, attestations, revoked } = entry;
+  const { record, status } = entry;
+  const verdict = record.verdict;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-12">
@@ -25,7 +26,7 @@ export default async function ArtifactPage({ params }: { params: Promise<{ hash:
 
       <div className="flex items-center justify-between gap-3">
         <h1 className="font-mono text-xl font-semibold">{record.name}</h1>
-        <Badge variant={statusVariant(record.status)}>{record.status}</Badge>
+        <Badge variant={statusVariant(status)}>{status}</Badge>
       </div>
 
       <Card>
@@ -33,35 +34,31 @@ export default async function ArtifactPage({ params }: { params: Promise<{ hash:
           <CardTitle>Pin</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 font-mono text-xs">
-          <Field label="bundle hash" value={record.bundleHash} />
-          <Field label="manifest hash" value={record.manifestHash} />
-          <Field label="publisher" value={record.publisher} />
-          <Field label="policy" value={record.policyRef} />
-          <Field label="revoked" value={String(revoked)} />
+          <Field label="content pin" value={record.pin} />
+          <Field label="ens node" value={record.node} />
+          <Field label="owner" value={record.owner} />
+          <Field label="content uri" value={record.contentUri ?? "—"} />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Attestations ({attestations.length})</CardTitle>
+          <CardTitle>Verdict</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {attestations.length === 0 && (
-            <p className="text-sm text-muted-foreground">No attestations.</p>
-          )}
-          {attestations.map((a, i) => (
-            <div key={i} className="rounded-md border p-3 text-xs">
+        <CardContent className="space-y-2 font-mono text-xs">
+          {!verdict && <p className="text-sm text-muted-foreground">No verdict written yet.</p>}
+          {verdict && (
+            <>
               <div className="flex items-center gap-2">
-                <Badge variant={a.kind === "revocation" ? "revoked" : "neutral"}>{a.kind}</Badge>
-                <span className="font-mono text-muted-foreground">{a.attestor}</span>
+                <Badge variant={verdict.status === "pass" ? "neutral" : "revoked"}>
+                  {verdict.status}
+                </Badge>
+                <span className="text-muted-foreground">risk {verdict.riskScore}/100</span>
               </div>
-              {a.payload != null && (
-                <pre className="mt-2 overflow-x-auto rounded bg-muted p-2 font-mono">
-                  {JSON.stringify(a.payload, null, 2)}
-                </pre>
-              )}
-            </div>
-          ))}
+              <Field label="attestation" value={verdict.attestationId || "—"} />
+              <Field label="reviewed hash" value={verdict.reviewedHash} />
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

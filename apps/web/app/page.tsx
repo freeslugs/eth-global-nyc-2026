@@ -179,27 +179,30 @@ export default async function HomePage() {
             </Link>
           </div>
           <div>
-            {entries.map(({ record, attestations, revoked }) => {
-              const status = STATUS_STYLE[record.status] ?? {
-                label: record.status,
+            {entries.map(({ record, status: seedStatus }) => {
+              const status = STATUS_STYLE[seedStatus] ?? {
+                label: seedStatus,
                 cls: "text-[#78716c]",
                 row: "",
               };
+              const verdictLabel = record.verdict
+                ? `${record.verdict.status} · risk ${record.verdict.riskScore}`
+                : "no verdict yet";
               return (
                 <Link
-                  key={record.bundleHash}
-                  href={`/a/${encodeURIComponent(record.bundleHash)}`}
+                  key={record.pin}
+                  href={`/a/${encodeURIComponent(record.pin)}`}
                   className={`flex items-center gap-4 border-b border-[#f5f4f1] px-6 py-4 transition-colors last:border-0 hover:bg-[#faf9f7] ${status.row}`}
                 >
                   <span className="flex-1 font-mono text-sm">{record.name}</span>
                   <span className="hidden font-mono text-xs text-[#a8a29e] sm:block">
-                    {shortHash(record.bundleHash, 6, 4)}
+                    {shortHash(record.pin, 6, 4)}
                   </span>
-                  <span className="hidden w-32 text-xs text-[#a8a29e] sm:block">
-                    {attestations.length} attestation(s)
+                  <span className="hidden w-40 text-xs text-[#a8a29e] sm:block">
+                    {verdictLabel}
                   </span>
                   <span className={`w-24 text-right text-[13px] font-medium ${status.cls}`}>
-                    {revoked && record.status !== "revoked" ? "⚠ revoked" : status.label}
+                    {status.label}
                   </span>
                 </Link>
               );

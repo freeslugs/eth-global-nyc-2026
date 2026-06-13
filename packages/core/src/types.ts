@@ -1,73 +1,80 @@
 /**
- * Aegis domain types. Pure data; no I/O, no chain, no fs.
+ * Aegis / Safe Skills domain types. Pure data; no I/O, no chain, no fs.
+ *
+ * A "skill" is, for the demo, a single SKILL.md file (instructions an agent
+ * loads into context). A poisoned skill hides an injected instruction; the gate
+ * catches it before the agent ever loads it.
  */
 
 export type Hex = `0x${string}`;
 
-/** Canonical artifact hash form: "sha256:<hex>". */
-export type ArtifactHash = string;
+/** Canonical skill hash form: "sha256:<hex>" of the SKILL.md bytes. */
+export type SkillHash = string;
 
-export interface Artifact {
-  /** Package / server code. */
-  bundle: Uint8Array;
-  /** MCP tool descriptors — hashed SEPARATELY (it is the poisoning surface). */
-  manifest: Uint8Array;
-}
-
-export interface ArtifactDigest {
-  bundleHash: ArtifactHash;
-  manifestHash: ArtifactHash;
-}
-
-export interface ResolvedRecord {
+/** A skill record as resolved from ENS. */
+export interface SkillRecord {
   name: string;
-  /** The PIN: expected bundle hash. */
-  bundleHash: ArtifactHash;
-  /** The PIN: expected manifest (descriptors) hash. */
-  manifestHash: ArtifactHash;
-  /** Address that must have signed provenance. */
-  publisher: Hex;
-  /** Policy id or URI. */
-  policyRef: string;
-  /** Optional pointer to attestation log. */
-  logRef?: string;
+  /** ENS namehash of the skill name. */
+  node: Hex;
+  /** safeskills.pin — the authoritative content hash, set by the org. */
+  pin: SkillHash;
+  /** safeskills.verdict — written by the Chainlink CRE (absent until reviewed). */
+  verdict?: Verdict;
+  /** Resolved from contenthash (public skills only). */
+  contentUri?: string;
+  /** ENS name owner (the org). */
+  owner: Hex;
 }
 
-export type AttestationKind = "provenance" | "review" | "confidential" | "revocation";
-
-export interface Attestation {
-  /** = bundleHash of the subject artifact. */
-  subject: ArtifactHash;
-  kind: AttestationKind;
-  attestor: Hex;
-  signature?: Hex;
-  /** Confidential lane: which program produced the verdict. */
-  analyzer?: ArtifactHash;
-  /** Verdict / score / flags. */
-  payload?: unknown;
-  bond?: bigint;
-  createdAt: number;
+/** The review verdict produced by the LLM inside the Chainlink TEE. */
+export interface Verdict {
+  status: "pass" | "fail";
+  /** 0 (safe) .. 100 (dangerous). */
+  riskScore: number;
+  /** Chainlink Confidential AI attestation id. */
+  attestationId: string;
+  /** The hash the TEE actually reviewed — binds the verdict to specific bytes. */
+  reviewedHash: SkillHash;
 }
 
+/** Consumer-side gate policy. */
 export interface Policy {
-  requireProvenance: boolean;
-  minReviews: number;
-  trustedAttestors?: Hex[];
-  /** Confidential lane: analyzers whose verdicts are trusted. */
-  trustedAnalyzers?: ArtifactHash[];
+  requireVerdict: boolean;
+  /** e.g. 30 — block anything riskier. */
+  maxRiskScore: number;
 }
 
-export type VerifyFailureReason =
-  | "hash_mismatch"
-  | "manifest_changed"
-  | "bad_provenance"
-  | "revoked"
-  | "under_policy";
+/** What the human physically signs on the Ledger to authorize an install. */
+export interface AuthRequest {
+  node: Hex;
+  name: string;
+  pin: SkillHash;
+  verdict: Verdict;
+}
 
-export type VerifyResult =
+/** Emitted by SubmissionRegistry.SubmissionPaid — the CRE trigger. */
+export interface SubmissionEvent {
+  node: Hex;
+  /** Org-committed content hash. */
+  pin: SkillHash;
+  /** Where the CRE pulls the skill from. */
+  fetchUri: string;
+  isPrivate: boolean;
+  submitter: Hex;
+}
+
+export type GateFailureReason =
+  | "hash_mismatch"
+  | "no_verdict"
+  | "verdict_fail"
+  | "under_policy"
+  | "revoked"
+  | "unauthorized";
+
+export type GateResult =
   | { ok: true }
   | {
       ok: false;
-      reason: VerifyFailureReason;
+      reason: GateFailureReason;
       detail?: string;
     };

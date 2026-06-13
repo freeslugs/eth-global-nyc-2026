@@ -7,10 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Badge, statusVariant } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+interface Verdict {
+  status: "pass" | "fail";
+  riskScore: number;
+  attestationId: string;
+  reviewedHash: string;
+}
+
 interface VerifyResponse {
   result: { ok: true } | { ok: false; reason: string; detail?: string };
-  resolved: { name: string; bundleHash: string; manifestHash: string; publisher: string };
-  fetched: { bundleHash: string; manifestHash: string };
+  resolved: { name: string; pin: string; owner: string; verdict?: Verdict };
+  fetched: { hash: string };
   error?: string;
 }
 
@@ -70,22 +77,15 @@ export function VerifyForm({ names }: { names: { name: string; status: string }[
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full rounded-md border bg-background px-3 py-2 font-mono text-sm"
-                placeholder="web-scraper.skills.aegis.eth"
+                placeholder="weather.acme.safeskills.eth"
               />
             </label>
             <label className="block space-y-1 text-sm">
-              <span className="text-muted-foreground">bundle.js</span>
+              <span className="text-muted-foreground">SKILL.md</span>
               <input
                 type="file"
-                name="bundle"
-                className="block w-full text-sm file:mr-3 file:rounded-md file:border file:bg-muted file:px-3 file:py-1.5 file:text-sm"
-              />
-            </label>
-            <label className="block space-y-1 text-sm">
-              <span className="text-muted-foreground">manifest.json</span>
-              <input
-                type="file"
-                name="manifest"
+                name="skill"
+                accept=".md,text/markdown"
                 className="block w-full text-sm file:mr-3 file:rounded-md file:border file:bg-muted file:px-3 file:py-1.5 file:text-sm"
               />
             </label>
@@ -106,7 +106,7 @@ export function VerifyForm({ names }: { names: { name: string; status: string }[
                   disabled={pending}
                   onClick={() => verifyFixture(n.name)}
                 >
-                  {n.name.replace(".skills.aegis.eth", "")}
+                  {n.name.replace(".safeskills.eth", "")}
                   <Badge variant={statusVariant(n.status)}>{n.status}</Badge>
                 </Button>
               ))}
@@ -133,6 +133,7 @@ export function VerifyForm({ names }: { names: { name: string; status: string }[
 
 function ResultPanel({ data }: { data: VerifyResponse }) {
   const ok = data.result.ok;
+  const verdict = data.resolved.verdict;
   return (
     <div className="space-y-4">
       <div
@@ -144,20 +145,16 @@ function ResultPanel({ data }: { data: VerifyResponse }) {
         )}
       >
         {ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-        {ok ? "ALLOW — skill matches its pinned release" : `BLOCK — ${data.result.reason}`}
+        {ok ? "ALLOW — content matches its pin and verdict" : `BLOCK — ${data.result.reason}`}
       </div>
       {!ok && data.result.detail && (
         <p className="font-mono text-xs text-muted-foreground">{data.result.detail}</p>
       )}
       <div className="space-y-1 font-mono text-xs">
-        <Row label="pin bundle" a={data.resolved.bundleHash} />
-        <Row label="got bundle" a={data.fetched.bundleHash} match={data.fetched.bundleHash === data.resolved.bundleHash} />
-        <Row label="pin manifest" a={data.resolved.manifestHash} />
-        <Row
-          label="got manifest"
-          a={data.fetched.manifestHash}
-          match={data.fetched.manifestHash === data.resolved.manifestHash}
-        />
+        <Row label="pin" a={data.resolved.pin} />
+        <Row label="got" a={data.fetched.hash} match={data.fetched.hash === data.resolved.pin} />
+        {verdict && <Row label="verdict" a={`${verdict.status} · risk ${verdict.riskScore}`} />}
+        {verdict && <Row label="attestation" a={verdict.attestationId || "—"} />}
       </div>
     </div>
   );

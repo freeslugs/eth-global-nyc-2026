@@ -1,6 +1,5 @@
 export * from "./types";
 export * from "./ports";
 export * from "./hash";
-export * from "./policy";
-export * from "./verify";
+export * from "./gate";
 export { NotImplementedError } from "./errors";

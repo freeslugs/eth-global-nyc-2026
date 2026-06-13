@@ -1,71 +1,81 @@
-import { readFileSync } from "node:fs";
 import type {
-  Resolver,
-  Fetcher,
-  Signer,
-  AttestationStore,
-  ConfidentialAttester,
-  ResolvedRecord,
-  Attestation,
+  SkillResolver,
+  SkillFetcher,
+  InstallSigner,
+  ReviewClient,
+  VerdictWriter,
+  SubmissionWatcher,
+  Policy,
   Hex,
 } from "@aegis/core";
 
+import { MockStore } from "./MockStore";
+import { defaultPolicy, type SeededSkill } from "./seed";
+
 import { MockResolver } from "./resolver/MockResolver";
-import { EnsResolver } from "./resolver/EnsResolver";
+import { EnsV2Resolver } from "./resolver/EnsV2Resolver";
+import { MockFetcher } from "./fetch/MockFetcher";
 import { FileFetcher } from "./fetch/FileFetcher";
-import { NpmFetcher } from "./fetch/NpmFetcher";
+import { IpfsFetcher } from "./fetch/IpfsFetcher";
 import { LocalSigner } from "./signer/LocalSigner";
 import { LedgerSigner } from "./signer/LedgerSigner";
-import { MemoryStore } from "./store/MemoryStore";
-import { OnchainStore } from "./store/OnchainStore";
-import { OffConfidential } from "./confidential/OffConfidential";
-import { ChainlinkConfidential } from "./confidential/ChainlinkConfidential";
-import { defaultSeed, type RegistrySeed } from "./seed";
+import { MockReview } from "./review/MockReview";
+import { ConfidentialAiClient } from "./review/ConfidentialAiClient";
+import { MockVerdictWriter } from "./verdict/MockVerdictWriter";
+import { EnsV2VerdictWriter } from "./verdict/EnsV2VerdictWriter";
+import { MockWatcher } from "./watcher/MockWatcher";
+import { ChainWatcher } from "./watcher/ChainWatcher";
 
 export interface Adapters {
-  resolver: Resolver;
-  fetcher: Fetcher;
-  signer: Signer;
-  store: AttestationStore;
-  confidential: ConfidentialAttester;
-  /** The seed in use (records, policies) — convenient for explorer views. */
-  seed: RegistrySeed;
-  /** Provenance signature verifier to pass into core's verify(). */
-  verifyProvenanceSig: (rec: ResolvedRecord, provenance: Attestation) => boolean;
-}
-
-/** In mock mode, a provenance attestation is valid iff it carries a signature. */
-function mockVerifyProvenanceSig(_rec: ResolvedRecord, provenance: Attestation): boolean {
-  return typeof provenance.signature === "string" && provenance.signature.length > 0;
-}
-
-function loadSeed(seedPath: string | undefined): RegistrySeed {
-  if (!seedPath) return defaultSeed;
-  return JSON.parse(readFileSync(seedPath, "utf8")) as RegistrySeed;
+  resolver: SkillResolver;
+  fetcher: SkillFetcher;
+  signer: InstallSigner;
+  review: ReviewClient;
+  verdict: VerdictWriter;
+  watcher: SubmissionWatcher;
+  /** The shared mock store (explorer views, submit→consume loop). Mock mode only. */
+  store: MockStore;
+  /** Seeded skills with status badges. */
+  seed: SeededSkill[];
+  /** Default consumer gate policy. */
+  policy: Policy;
 }
 
 /**
- * Build the adapter set from environment flags. Every flag defaults to a mock,
- * so the repo runs with zero chain config. Switching a flag to its "real"
- * value reaches a stub that throws NotImplementedError.
+ * Build the adapter set from env flags. EVERY flag defaults to its mock, so the
+ * whole system runs with zero chain / Ledger / Chainlink config. Flip ONE flag
+ * to bring up ONE real adapter in isolation while everything else stays mocked.
+ *
+ *   AEGIS_RESOLVER=mock|ens     AEGIS_FETCHER=mock|file|ipfs
+ *   AEGIS_SIGNER=local|ledger   AEGIS_REVIEW=mock|chainlink
+ *   AEGIS_VERDICT=mock|ens      AEGIS_WATCHER=mock|chain
  */
 export function buildAdapters(env: NodeJS.ProcessEnv = process.env): Adapters {
-  const seed = loadSeed(env.AEGIS_SEED_PATH);
+  const store = new MockStore();
 
-  const resolver: Resolver = env.AEGIS_RESOLVER === "ens" ? new EnsResolver() : new MockResolver(seed);
+  const resolver: SkillResolver =
+    env.AEGIS_RESOLVER === "ens" ? new EnsV2Resolver() : new MockResolver(store);
 
-  const fetcher: Fetcher = env.AEGIS_FETCHER === "npm" ? new NpmFetcher() : new FileFetcher();
+  const fetcher: SkillFetcher =
+    env.AEGIS_FETCHER === "ipfs"
+      ? new IpfsFetcher()
+      : env.AEGIS_FETCHER === "file"
+        ? new FileFetcher()
+        : new MockFetcher();
 
-  const signer: Signer =
+  const signer: InstallSigner =
     env.AEGIS_SIGNER === "ledger"
       ? new LedgerSigner()
       : new LocalSigner(env.AEGIS_PRIVATE_KEY as Hex | undefined);
 
-  const store: AttestationStore =
-    env.AEGIS_STORE === "onchain" ? new OnchainStore() : new MemoryStore(seed);
+  const review: ReviewClient =
+    env.AEGIS_REVIEW === "chainlink" ? new ConfidentialAiClient() : new MockReview();
 
-  const confidential: ConfidentialAttester =
-    env.AEGIS_CONFIDENTIAL === "chainlink" ? new ChainlinkConfidential() : new OffConfidential();
+  const verdict: VerdictWriter =
+    env.AEGIS_VERDICT === "ens" ? new EnsV2VerdictWriter() : new MockVerdictWriter(store);
 
-  return { resolver, fetcher, signer, store, confidential, seed, verifyProvenanceSig: mockVerifyProvenanceSig };
+  const watcher: SubmissionWatcher =
+    env.AEGIS_WATCHER === "chain" ? new ChainWatcher() : new MockWatcher();
+
+  return { resolver, fetcher, signer, review, verdict, watcher, store, seed: store.seeded, policy: defaultPolicy };
 }

@@ -1,3 +1,8 @@
+> ⚠️ **SUPERSEDED.** This earlier plan is kept for history only. The canonical
+> design is [ADR-001-aegis.md](./ADR-001-aegis.md) ("Safe Skills"), and the repo
+> now follows the ADR's ports/`gate()` decomposition. See [OWNERSHIP.md](./OWNERSHIP.md)
+> for the current module map and parallel-work lanes.
+
 # Aegis Pivot Plan — Skills, ENS, Ledger, Chainlink CRE + AI Attestor
 
 **Goal:** Reframe Aegis from "verify npm packages / MCP servers" to **"verify agent skills before they run"**, with every chain/hardware integration wired *for real* (no mocks) on Sepolia.

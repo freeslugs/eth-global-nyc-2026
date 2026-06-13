@@ -17,12 +17,13 @@
     "dev": "tsup --watch",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "gen:fixtures": "node scripts/generate-fixtures.js"
+    "test": "vitest run"
   },
   "dependencies": {
     "@aegis/chain": "workspace:*",
     "@aegis/core": "workspace:*",
+    "@noble/curves": "^1.8.0",
+    "@noble/hashes": "^1.7.0",
     "viem": "^2.22.0"
   },
   "devDependencies": {

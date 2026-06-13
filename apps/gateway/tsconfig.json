@@ -1,9 +1,0 @@
-{
-  "extends": "@aegis/tsconfig/library.json",
-  "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "dist"
-  },
-  "include": ["src/**/*.ts"],
-  "exclude": ["dist", "node_modules", "fixtures"]
-}

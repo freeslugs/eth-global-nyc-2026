@@ -1,99 +1,27 @@
 {
-  "policies": {
-    "policy:default": {
-      "requireProvenance": true,
-      "minReviews": 1,
-      "trustedAttestors": [
-        "0x1111111111111111111111111111111111111111",
-        "0x2222222222222222222222222222222222222222",
-        "0x3333333333333333333333333333333333333333"
-      ]
-    },
-    "policy:permissive": {
-      "requireProvenance": false,
-      "minReviews": 0
-    }
-  },
-  "records": [
+  "policy": { "requireVerdict": true, "maxRiskScore": 30 },
+  "org": "0x1111111111111111111111111111111111111111",
+  "skills": [
     {
-      "name": "web-scraper.skills.aegis.eth",
-      "bundleHash": "sha256:8ecb04b168eabae739cc970a23bba1cdbbe8b4507d535f55e69bad0860379213",
-      "manifestHash": "sha256:f1c32ab89c5106ab8a4d36dd1530238d78ca906c810b64498f128e3ca5987918",
-      "publisher": "0x1111111111111111111111111111111111111111",
-      "policyRef": "policy:default",
-      "logRef": "log:web-scraper",
-      "status": "verified",
-      "artifactPath": "packages/adapters/fixtures/artifacts/web-scraper"
+      "name": "weather.acme.safeskills.eth",
+      "file": "clean.md",
+      "isPrivate": false,
+      "verdict": "pass",
+      "status": "verified"
     },
     {
-      "name": "repo-indexer.skills.aegis.eth",
-      "bundleHash": "sha256:d0328d890209f6a0d806f8a4a869703b5550e60c02c1a3cf86fe261bc4675b27",
-      "manifestHash": "sha256:974ef17d2bdb6222ab6e1c5813a89420305a80d150573dc92a41e6ec8db35f77",
-      "publisher": "0x2222222222222222222222222222222222222222",
-      "policyRef": "policy:default",
-      "logRef": "log:repo-indexer",
-      "status": "revoked",
-      "artifactPath": "packages/adapters/fixtures/artifacts/repo-indexer"
+      "name": "exfil.acme.safeskills.eth",
+      "file": "poisoned.md",
+      "isPrivate": false,
+      "verdict": "fail",
+      "status": "poisoned"
     },
     {
-      "name": "slack-notifier.skills.aegis.eth",
-      "bundleHash": "sha256:b03fd360c2bafa446cc306364e117ff02b6c691b7446e410faba9a919d2a8783",
-      "manifestHash": "sha256:d6a9e30e616b7ae397a712783516055a11a1ea42cdcf0d36d0d4c649a7406991",
-      "publisher": "0x1111111111111111111111111111111111111111",
-      "policyRef": "policy:default",
-      "logRef": "log:slack-notifier",
-      "status": "poisoned",
-      "artifactPath": "packages/adapters/fixtures/artifacts/slack-notifier"
-    }
-  ],
-  "attestations": [
-    {
-      "subject": "sha256:8ecb04b168eabae739cc970a23bba1cdbbe8b4507d535f55e69bad0860379213",
-      "kind": "provenance",
-      "attestor": "0x1111111111111111111111111111111111111111",
-      "signature": "0xabababababababababababababababababababababababababababababababab",
-      "createdAt": 1700000000
-    },
-    {
-      "subject": "sha256:8ecb04b168eabae739cc970a23bba1cdbbe8b4507d535f55e69bad0860379213",
-      "kind": "review",
-      "attestor": "0x3333333333333333333333333333333333333333",
-      "payload": {
-        "score": 96,
-        "notes": "minimal scope, single fetch tool, no shell access"
-      },
-      "createdAt": 1700000100
-    },
-    {
-      "subject": "sha256:d0328d890209f6a0d806f8a4a869703b5550e60c02c1a3cf86fe261bc4675b27",
-      "kind": "provenance",
-      "attestor": "0x2222222222222222222222222222222222222222",
-      "signature": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
-      "createdAt": 1700000200
-    },
-    {
-      "subject": "sha256:d0328d890209f6a0d806f8a4a869703b5550e60c02c1a3cf86fe261bc4675b27",
-      "kind": "review",
-      "attestor": "0x3333333333333333333333333333333333333333",
-      "payload": {
-        "score": 88
-      },
-      "createdAt": 1700000300
-    },
-    {
-      "subject": "sha256:b03fd360c2bafa446cc306364e117ff02b6c691b7446e410faba9a919d2a8783",
-      "kind": "provenance",
-      "attestor": "0x1111111111111111111111111111111111111111",
-      "signature": "0xefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
-      "createdAt": 1700000400
-    }
-  ],
-  "revocations": [
-    {
-      "subject": "sha256:d0328d890209f6a0d806f8a4a869703b5550e60c02c1a3cf86fe261bc4675b27",
-      "by": "0x2222222222222222222222222222222222222222",
-      "signature": "0x9999999999999999999999999999999999999999999999999999999999999999",
-      "reason": "CVE-2025-0042: reads .env and exfiltrates secrets"
+      "name": "pending.acme.safeskills.eth",
+      "file": "clean.md",
+      "isPrivate": false,
+      "verdict": null,
+      "status": "pending"
     }
   ]
 }

@@ -1,0 +1,24 @@
+# Safe Skills ownership lanes — one owner per port-module / app, so features
+# ship independently. See OWNERSHIP.md for the full map and the rule that keeps
+# lanes from colliding (adapters import only @aegis/core, never each other).
+#
+# Replace the @placeholder handles with real GitHub usernames.
+
+# Pure engine — changes here ripple everywhere, so review carefully.
+/packages/core/                         @core-owner
+
+# Each adapter port-module is an independent lane.
+/packages/adapters/src/resolver/        @ens-owner
+/packages/adapters/src/verdict/         @ens-owner
+/packages/adapters/src/fetch/           @fetch-owner
+/packages/adapters/src/signer/          @ledger-owner
+/packages/adapters/src/review/          @chainlink-owner
+/packages/adapters/src/watcher/         @chainlink-owner
+
+# Apps.
+/apps/web/                              @web-owner
+/apps/cli/                              @cli-owner
+/apps/cre-workflow/                     @chainlink-owner
+
+# Contracts.
+/packages/contracts/                    @contracts-owner
