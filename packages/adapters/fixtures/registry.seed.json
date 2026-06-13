@@ -1,99 +1,27 @@
 {
-  "policies": {
-    "policy:default": {
-      "requireProvenance": true,
-      "minReviews": 1,
-      "trustedAttestors": [
-        "0x1111111111111111111111111111111111111111",
-        "0x2222222222222222222222222222222222222222",
-        "0x3333333333333333333333333333333333333333"
-      ]
-    },
-    "policy:permissive": {
-      "requireProvenance": false,
-      "minReviews": 0
-    }
-  },
-  "records": [
+  "policy": { "requireVerdict": true, "maxRiskScore": 30 },
+  "org": "0x1111111111111111111111111111111111111111",
+  "skills": [
     {
-      "name": "echo-tool.aegis.eth",
-      "bundleHash": "sha256:2af950f508f29aee1ef593ef0c308d32773b3400904fe073e74611d8a33118b7",
-      "manifestHash": "sha256:c5d7649457663137fed11809946e24086dcb3a072868e9427d9aafccd5ba4e33",
-      "publisher": "0x1111111111111111111111111111111111111111",
-      "policyRef": "policy:default",
-      "logRef": "log:echo-tool",
-      "status": "verified",
-      "artifactPath": "packages/adapters/fixtures/artifacts/echo-tool"
+      "name": "weather.acme.safeskills.eth",
+      "file": "clean.md",
+      "isPrivate": false,
+      "verdict": "pass",
+      "status": "verified"
     },
     {
-      "name": "weather-tool.aegis.eth",
-      "bundleHash": "sha256:2d9c022d6e505cfb362e74b75f7332d1898418a1b38130310dc46cc4702cdfdf",
-      "manifestHash": "sha256:e444c1f16576922c0f74d16e63ed5dbc18fbc03d9af4076193aff4db52e7b675",
-      "publisher": "0x2222222222222222222222222222222222222222",
-      "policyRef": "policy:default",
-      "logRef": "log:weather-tool",
-      "status": "revoked",
-      "artifactPath": "packages/adapters/fixtures/artifacts/weather-tool"
+      "name": "exfil.acme.safeskills.eth",
+      "file": "poisoned.md",
+      "isPrivate": false,
+      "verdict": "fail",
+      "status": "poisoned"
     },
     {
-      "name": "mailer-tool.aegis.eth",
-      "bundleHash": "sha256:a11f786ae52e3e7ee29b6fbd5c324a86d1dcd0ce6e2d04e9bbe71660667de0d9",
-      "manifestHash": "sha256:18badbfcd3ba0cabcc8486367d2d777a427515222cb6d519c6c4b8cdcc3c31c5",
-      "publisher": "0x1111111111111111111111111111111111111111",
-      "policyRef": "policy:default",
-      "logRef": "log:mailer-tool",
-      "status": "poisoned",
-      "artifactPath": "packages/adapters/fixtures/artifacts/mailer-tool"
-    }
-  ],
-  "attestations": [
-    {
-      "subject": "sha256:2af950f508f29aee1ef593ef0c308d32773b3400904fe073e74611d8a33118b7",
-      "kind": "provenance",
-      "attestor": "0x1111111111111111111111111111111111111111",
-      "signature": "0xabababababababababababababababababababababababababababababababab",
-      "createdAt": 1700000000
-    },
-    {
-      "subject": "sha256:2af950f508f29aee1ef593ef0c308d32773b3400904fe073e74611d8a33118b7",
-      "kind": "review",
-      "attestor": "0x3333333333333333333333333333333333333333",
-      "payload": {
-        "score": 96,
-        "notes": "scope minimal, no network egress"
-      },
-      "createdAt": 1700000100
-    },
-    {
-      "subject": "sha256:2d9c022d6e505cfb362e74b75f7332d1898418a1b38130310dc46cc4702cdfdf",
-      "kind": "provenance",
-      "attestor": "0x2222222222222222222222222222222222222222",
-      "signature": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
-      "createdAt": 1700000200
-    },
-    {
-      "subject": "sha256:2d9c022d6e505cfb362e74b75f7332d1898418a1b38130310dc46cc4702cdfdf",
-      "kind": "review",
-      "attestor": "0x3333333333333333333333333333333333333333",
-      "payload": {
-        "score": 90
-      },
-      "createdAt": 1700000300
-    },
-    {
-      "subject": "sha256:a11f786ae52e3e7ee29b6fbd5c324a86d1dcd0ce6e2d04e9bbe71660667de0d9",
-      "kind": "provenance",
-      "attestor": "0x1111111111111111111111111111111111111111",
-      "signature": "0xefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
-      "createdAt": 1700000400
-    }
-  ],
-  "revocations": [
-    {
-      "subject": "sha256:2d9c022d6e505cfb362e74b75f7332d1898418a1b38130310dc46cc4702cdfdf",
-      "by": "0x2222222222222222222222222222222222222222",
-      "signature": "0x9999999999999999999999999999999999999999999999999999999999999999",
-      "reason": "CVE-2025-0001: SSRF in forecast()"
+      "name": "pending.acme.safeskills.eth",
+      "file": "clean.md",
+      "isPrivate": false,
+      "verdict": null,
+      "status": "pending"
     }
   ]
 }

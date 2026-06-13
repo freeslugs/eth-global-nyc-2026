@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
+    "safeskills": "./dist/index.js",
     "aegis": "./dist/index.js"
   },
   "files": ["dist"],

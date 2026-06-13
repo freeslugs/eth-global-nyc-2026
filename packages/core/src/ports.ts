@@ -1,34 +1,53 @@
-import type { Artifact, ArtifactHash, ResolvedRecord, Attestation, Hex } from "./types";
+import type { Hex, SkillRecord, Verdict, AuthRequest, SubmissionEvent } from "./types";
 
-/** Pulls an artifact from a source (npm / url / file). */
-export interface Fetcher {
-  fetch(source: string): Promise<Artifact>;
+/**
+ * Ports = the typed seams between every component. Each port has a MOCK adapter
+ * (the offline default) and, later, a REAL adapter — both proven against the
+ * same contract test (see `@aegis/core/testing`). Nothing outside an adapter
+ * calls a chain / SDK / device directly, so each port is built and tested in
+ * total isolation by a different person.
+ */
+
+// ---------------------------------------------------------------------------
+// consumer side
+// ---------------------------------------------------------------------------
+
+/** ENS v2 read: resolve a skill name to its pin + verdict + owner. */
+export interface SkillResolver {
+  resolve(name: string): Promise<SkillRecord>;
 }
 
-/** Resolves a human-readable name to its pinned record. ENS lives here. */
-export interface Resolver {
-  resolve(name: string): Promise<ResolvedRecord>;
+/** Pulls SKILL.md bytes from IPFS / URL / file. */
+export interface SkillFetcher {
+  fetch(uri: string): Promise<Uint8Array>;
 }
 
-/** Signs bytes with a trust key. Ledger lives here. */
-export interface Signer {
+/** Ledger (or a dev key): authorizes the install with a human-present signature. */
+export interface InstallSigner {
   address(): Promise<Hex>;
-  sign(msg: Uint8Array): Promise<Hex>;
+  /** Device shows the request detail; returns a signature. */
+  authorize(req: AuthRequest): Promise<Hex>;
+  verify(req: AuthRequest, sig: Hex, signer: Hex): boolean;
 }
 
-/** Stores pins, attestations, and revocations. On-chain store lives here. */
-export interface AttestationStore {
-  getAttestations(subject: ArtifactHash): Promise<Attestation[]>;
-  isRevoked(subject: ArtifactHash): Promise<boolean>;
-  postAttestation(a: Attestation): Promise<void>;
-  postRevocation(subject: ArtifactHash, by: Hex, signature: Hex): Promise<void>;
-  /** Used by the publish flow to record/move the pin. */
-  setPin(rec: ResolvedRecord): Promise<void>;
-  /** Resolve a pin previously set (used by mock resolver/registry views). */
-  getPin?(name: string): Promise<ResolvedRecord | undefined>;
+// ---------------------------------------------------------------------------
+// producer / CRE side
+// ---------------------------------------------------------------------------
+
+/** Watches the on-chain SubmissionPaid event (the CRE trigger). */
+export interface SubmissionWatcher {
+  onSubmission(cb: (e: SubmissionEvent) => void): void;
 }
 
-/** Requests an off-chain confidential analysis verdict. Chainlink lives here. */
-export interface ConfidentialAttester {
-  requestAnalysis(subject: ArtifactHash, analyzer: ArtifactHash, uri: string): Promise<void>;
+/** Chainlink Confidential AI — the LLM-in-a-TEE review (two endpoints). */
+export interface ReviewClient {
+  /** -> attestationId */
+  submit(prompt: string, file: Uint8Array): Promise<string>;
+  /** -> verdict (poll until ready) */
+  attestation(id: string): Promise<Verdict>;
+}
+
+/** Writes safeskills.verdict to the ENS name (CRE-only via special-access rule). */
+export interface VerdictWriter {
+  writeVerdict(node: Hex, v: Verdict): Promise<void>;
 }

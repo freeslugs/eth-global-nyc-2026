@@ -1,21 +1,9 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import type { Artifact, Fetcher } from "@aegis/core";
+import type { SkillFetcher } from "@aegis/core";
 
-/**
- * Reads an artifact from the local filesystem. `source` is a directory
- * containing `bundle.js` (the code) and `manifest.json` (the MCP tool
- * descriptors). Both are read as raw bytes and hashed separately downstream.
- */
-export class FileFetcher implements Fetcher {
-  async fetch(source: string): Promise<Artifact> {
-    const [bundle, manifest] = await Promise.all([
-      readFile(join(source, "bundle.js")),
-      readFile(join(source, "manifest.json")),
-    ]);
-    return {
-      bundle: new Uint8Array(bundle),
-      manifest: new Uint8Array(manifest),
-    };
+/** Reads a SKILL.md from a local filesystem path (uri = file path). */
+export class FileFetcher implements SkillFetcher {
+  async fetch(uri: string): Promise<Uint8Array> {
+    return new Uint8Array(await readFile(uri));
   }
 }

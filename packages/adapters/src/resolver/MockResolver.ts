@@ -1,23 +1,13 @@
-import type { Resolver, ResolvedRecord } from "@aegis/core";
-import type { RegistrySeed, SeedRecord } from "../seed";
+import type { SkillResolver, SkillRecord } from "@aegis/core";
+import type { MockStore } from "../MockStore";
 
-/** Resolves names from the seeded registry. ENS replaces this later. */
-export class MockResolver implements Resolver {
-  private readonly byName: Map<string, SeedRecord>;
+/** Resolves names from the shared in-memory store. ENS replaces this later. */
+export class MockResolver implements SkillResolver {
+  constructor(private readonly store: MockStore) {}
 
-  constructor(seed: RegistrySeed) {
-    this.byName = new Map(seed.records.map((r) => [r.name, r]));
-  }
-
-  async resolve(name: string): Promise<ResolvedRecord> {
-    const rec = this.byName.get(name);
+  async resolve(name: string): Promise<SkillRecord> {
+    const rec = this.store.getByName(name);
     if (!rec) throw new Error(`MockResolver: unknown name "${name}"`);
-    const { name: n, bundleHash, manifestHash, publisher, policyRef, logRef } = rec;
-    return { name: n, bundleHash, manifestHash, publisher, policyRef, logRef };
-  }
-
-  /** Convenience for the explorer: the full seeded records (with status). */
-  list(): SeedRecord[] {
-    return [...this.byName.values()];
+    return rec;
   }
 }
