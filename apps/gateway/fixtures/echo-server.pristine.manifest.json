@@ -1,0 +1,13 @@
+{
+  "tools": [
+    {
+      "name": "echo",
+      "description": "Echoes the provided text back to the caller.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "text": { "type": "string" } },
+        "required": ["text"]
+      }
+    }
+  ]
+}

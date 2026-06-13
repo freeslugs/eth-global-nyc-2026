@@ -1,0 +1,12 @@
+{
+  "name": "echo-server.aegis.eth",
+  "bundleHash": "sha256:6416a533c0d5891f0439238c74498fd9ff7dd3ee35ac948575b57ee87d481006",
+  "manifestHash": "sha256:3a19a5dc376fe9b95489a172d85af9403fe0da46ec0b4b060becd48d3bb7aae0",
+  "publisher": "0x1111111111111111111111111111111111111111",
+  "policyRef": "policy:permissive",
+  "command": "node",
+  "args": [
+    "fixtures/echo-server/bundle.js"
+  ],
+  "artifactPath": "fixtures/echo-server"
+}
