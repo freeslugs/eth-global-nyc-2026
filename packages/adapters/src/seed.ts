@@ -1,12 +1,7 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { namehash } from "viem/ens";
 import { hashSkill, type Hex, type Policy, type SkillRecord, type Verdict } from "@aegis/core";
 import seedJson from "../fixtures/registry.seed.json";
-
-/** Absolute path to this package's fixtures dir, robust to the caller's cwd. */
-export const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), "..", "fixtures");
+import { fixtureContent } from "./fixtures";
 
 export type SkillStatus = "verified" | "poisoned" | "pending" | "revoked";
 
@@ -47,7 +42,9 @@ function makeVerdict(kind: "pass" | "fail" | null, pin: string, name: string): V
 /** Read the fixtures, compute pins, and assemble the seeded skill records. */
 export function loadSeededSkills(): SeededSkill[] {
   return seed.skills.map((s) => {
-    const bytes = new Uint8Array(readFileSync(join(fixturesDir, s.file)));
+    const content = fixtureContent[s.file];
+    if (!content) throw new Error(`Unknown fixture: ${s.file}`);
+    const bytes = new Uint8Array(content);
     const pin = hashSkill(bytes);
     return {
       name: s.name,

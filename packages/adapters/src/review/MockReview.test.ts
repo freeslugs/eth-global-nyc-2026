@@ -1,12 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { reviewContract } from "@aegis/core/testing";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { fixturesDir } from "../seed";
 import { MockReview } from "./MockReview";
+import { fixtureContent } from "../fixtures";
 
-const clean = new Uint8Array(readFileSync(join(fixturesDir, "clean.md")));
-const poisoned = new Uint8Array(readFileSync(join(fixturesDir, "poisoned.md")));
+const clean = new Uint8Array(fixtureContent["clean.md"]!);
+const poisoned = new Uint8Array(fixtureContent["poisoned.md"]!);
 
 reviewContract({ make: () => new MockReview(), prompt: "review this skill", file: clean });
 
