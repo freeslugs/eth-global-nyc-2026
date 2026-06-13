@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getRegistry } from "@/lib/registry.server";
 import { shortHash } from "@/lib/utils";
+import { ArchitectureDiagram } from "@/components/architecture-diagram";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -140,6 +141,25 @@ export default async function HomePage() {
               <p className="text-sm leading-relaxed text-[#78716c]">{s.body}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ===== ARCHITECTURE DIAGRAM ===== */}
+      <section className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="mb-7 text-center">
+          <div className="mb-2 text-[13px] uppercase tracking-[0.04em] text-accent">
+            The architecture
+          </div>
+          <h2 className="font-display text-3xl font-semibold tracking-[-0.01em]">
+            One pipeline, public and private skills.
+          </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-[#78716c]">
+            A Chainlink CRE workflow reviews each skill inside a TEE and writes a verifiable verdict
+            on-chain — private code never leaves the enclave.
+          </p>
+        </div>
+        <div className="overflow-x-auto rounded-2xl border border-[#e7e5e1] bg-white p-5 sm:p-8">
+          <ArchitectureDiagram />
         </div>
       </section>
 
