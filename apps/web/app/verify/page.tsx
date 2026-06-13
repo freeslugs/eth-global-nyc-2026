@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default function VerifyPage() {
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-6 py-12">
       <section className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Verify</h1>
         <p className="max-w-2xl text-muted-foreground">

@@ -21,13 +21,21 @@ const config: Config = {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
+        // Aegis brand palette
+        ink: "#1c1917",
+        paper: "#f4f3f0",
+        night: "#16130f",
+        accent: "#0b8457",
+        mint: "#d9f2e6",
       },
       borderRadius: {
         lg: "0.75rem",
         md: "0.5rem",
       },
       fontFamily: {
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        display: ["var(--font-display)", "Space Grotesk", "sans-serif"],
+        sans: ["var(--font-sans)", "IBM Plex Sans", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "IBM Plex Mono", "ui-monospace", "monospace"],
       },
     },
   },

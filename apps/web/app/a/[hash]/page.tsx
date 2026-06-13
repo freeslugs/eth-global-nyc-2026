@@ -8,18 +8,14 @@ import { Badge, statusVariant } from "@/components/ui/badge";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export default async function ArtifactPage({
-  params,
-}: {
-  params: Promise<{ hash: string }>;
-}) {
+export default async function ArtifactPage({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = await params;
   const entry = await getEntryByHash(decodeURIComponent(hash));
   if (!entry) notFound();
   const { record, attestations, revoked } = entry;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-6 py-12">
       <Link
         href="/"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
