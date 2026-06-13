@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { MobileMenu } from "@/components/mobile-menu";
+import { NAV_LINKS } from "@/lib/nav";
 
 const display = Space_Grotesk({
   subsets: ["latin"],
@@ -37,29 +39,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 ◇ Aegis
               </Link>
               <nav className="ml-4 hidden flex-1 items-center justify-center gap-7 text-sm text-[#78716c] md:flex">
-                <Link href="/how-it-works" className="hover:text-ink">
-                  How it works
-                </Link>
-                <Link href="/#architecture" className="hover:text-ink">
-                  Architecture
-                </Link>
-                <Link href="/threats" className="hover:text-ink">
-                  The threat
-                </Link>
-                <Link href="/" className="hover:text-ink">
-                  Registry
-                </Link>
-                <Link href="/verify" className="hover:text-ink">
-                  Verify
-                </Link>
-                <a
-                  href="https://github.com/freeslugs/eth-global-nyc-2026"
-                  className="hover:text-ink"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  GitHub
-                </a>
+                {NAV_LINKS.map((l) =>
+                  l.external ? (
+                    <a
+                      key={l.href}
+                      href={l.href}
+                      className="hover:text-ink"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {l.label}
+                    </a>
+                  ) : (
+                    <Link key={l.href} href={l.href} className="hover:text-ink">
+                      {l.label}
+                    </Link>
+                  ),
+                )}
               </nav>
               <Link
                 href="/verify"
@@ -67,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               >
                 Get the SDK
               </Link>
+              <MobileMenu />
             </div>
           </header>
 
