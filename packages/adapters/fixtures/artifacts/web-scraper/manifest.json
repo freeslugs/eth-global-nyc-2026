@@ -1,0 +1,5 @@
+{
+  "name": "web-scraper",
+  "description": "Fetch a web page and extract its main text content.",
+  "allowed-tools": ["WebFetch"]
+}

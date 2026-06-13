@@ -85,19 +85,19 @@ export default async function HomePage() {
             </div>
             <div className="mt-8 rounded-[10px] bg-ink px-5 py-4 font-mono text-[13px] leading-[1.9] text-mint">
               <div className="text-[#78716c]">$ npm i @aegis/cli</div>
-              <div>$ aegis verify pdf-export.skills.aegis.eth</div>
+              <div>$ aegis verify web-scraper.skills.aegis.eth</div>
             </div>
           </div>
 
           {/* terminal mock */}
           <div className="rounded-xl bg-night p-6 font-mono text-[13px] leading-[1.95] text-[#e7e5e4] shadow-2xl">
-            <div className="text-[#78716c]">$ aegis verify pdf-export.skills.aegis.eth</div>
+            <div className="text-[#78716c]">$ aegis verify web-scraper.skills.aegis.eth</div>
             <div className="text-[#34d399]">✓ content hash matches ENS pin</div>
             <div className="text-[#34d399]">✓ AI attestor: safe · chainlink CRE</div>
             <div className="text-[#34d399]">✓ policy ok · ledger:0x9f…21a</div>
             <div className="text-mint">PASS — safe to load</div>
             <div className="h-4" />
-            <div className="text-[#78716c]">$ aegis verify repo-indexer.skills.aegis.eth</div>
+            <div className="text-[#78716c]">$ aegis verify slack-notifier.skills.aegis.eth</div>
             <div className="text-[#f87171]">✗ skill modified since attestation</div>
             <div className="text-[#fca5a5]">BLOCKED — execution halted</div>
           </div>
