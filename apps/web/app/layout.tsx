@@ -40,6 +40,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Link href="/how-it-works" className="hover:text-ink">
                   How it works
                 </Link>
+                <Link href="/#architecture" className="hover:text-ink">
+                  Architecture
+                </Link>
                 <Link href="/threats" className="hover:text-ink">
                   The threat
                 </Link>

@@ -145,7 +145,7 @@ export default async function HomePage() {
       </section>
 
       {/* ===== ARCHITECTURE DIAGRAM ===== */}
-      <section className="mx-auto max-w-6xl px-6 pb-20">
+      <section id="architecture" className="mx-auto max-w-6xl scroll-mt-24 px-6 pb-20">
         <div className="mb-7 text-center">
           <div className="mb-2 text-[13px] uppercase tracking-[0.04em] text-accent">
             The architecture
