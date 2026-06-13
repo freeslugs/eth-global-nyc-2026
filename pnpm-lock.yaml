@@ -17,6 +17,9 @@ importers:
       '@aegis/tsconfig':
         specifier: workspace:*
         version: link:tooling/typescript
+      next:
+        specifier: ^15.1.4
+        version: 15.5.19(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       prettier:
         specifier: ^3.4.2
         version: 3.8.4
