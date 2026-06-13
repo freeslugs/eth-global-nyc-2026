@@ -22,6 +22,10 @@
   "dependencies": {
     "viem": "^2.22.0"
   },
+  "optionalDependencies": {
+    "@ledgerhq/hw-app-eth": "^6.45.0",
+    "@ledgerhq/hw-transport-node-hid": "^6.29.0"
+  },
   "devDependencies": {
     "@aegis/eslint-config": "workspace:*",
     "@aegis/tsconfig": "workspace:*",
