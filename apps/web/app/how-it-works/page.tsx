@@ -12,7 +12,7 @@ const PIPELINE = [
   { title: "Hash", sub: "content fingerprint", tone: "default" },
   { title: "AI attestor", sub: "Chainlink CRE", tone: "ink" },
   { title: "Ledger policy", sub: "you approve", tone: "default" },
-  { title: "ENS verified", sub: "name.skills.aegis.eth", tone: "accent" },
+  { title: "ENS verified", sub: "skill.acme.safeskills.eth", tone: "accent" },
 ];
 
 const STAGES = [
@@ -81,7 +81,7 @@ export default function HowItWorksPage() {
 
         <div className="mt-11 flex flex-wrap justify-center gap-3">
           <Link
-            href="/verify"
+            href="/sdk"
             className="rounded-md bg-ink px-6 py-3 text-base font-medium text-white transition-colors hover:bg-ink/90"
           >
             Get the SDK →
@@ -141,7 +141,7 @@ export default function HowItWorksPage() {
           Put your skills on the pipeline.
         </h2>
         <Link
-          href="/verify"
+          href="/sdk"
           className="mt-6 inline-block rounded-md bg-ink px-8 py-3.5 text-[17px] font-medium text-white transition-colors hover:bg-ink/90"
         >
           Get the SDK →

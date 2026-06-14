@@ -4,6 +4,8 @@ import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { MobileMenu } from "@/components/mobile-menu";
+import { ConnectButton } from "@/components/connect-button";
+import { AppMenu } from "@/components/app-menu";
 import { NAV_LINKS } from "@/lib/nav";
 
 const display = Space_Grotesk({
@@ -56,13 +58,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     </Link>
                   ),
                 )}
+                <span className="h-4 w-px bg-[#e7e5e1]" aria-hidden />
+                <AppMenu />
               </nav>
-              <Link
-                href="/verify"
-                className="ml-auto rounded-md bg-ink px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-ink/90 md:ml-0"
-              >
-                Get the SDK
-              </Link>
+              <div className="ml-auto flex items-center gap-2 md:ml-0">
+                <Link
+                  href="/register"
+                  className="hidden rounded-md border border-[#d6d3ce] bg-white px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-[#faf9f7] sm:inline-block"
+                >
+                  Submit a skill
+                </Link>
+                <ConnectButton />
+              </div>
               <MobileMenu />
             </div>
           </header>

@@ -3,6 +3,10 @@ import { buildAdapters, type Adapters } from "@aegis/adapters";
 
 export interface RegistryEntry {
   record: SkillRecord;
+  /** Human-readable name (mock; would be the ENS `name` text record). */
+  title: string;
+  /** Short description (mock; would be the ENS `description` text record). */
+  description: string;
   /** Demo status badge from the seed (verified / poisoned / pending / revoked). */
   status: string;
   /** The fetch uri used to re-verify the bytes. */
@@ -21,6 +25,8 @@ export async function getRegistry(): Promise<RegistryEntry[]> {
   return Promise.all(
     a.seed.map(async (s) => ({
       record: await a.resolver.resolve(s.name),
+      title: s.title,
+      description: s.description,
       status: s.status,
       fetchUri: s.fetchUri,
     })),
@@ -31,6 +37,43 @@ export async function getRegistry(): Promise<RegistryEntry[]> {
 export async function getEntryByPin(pin: string): Promise<RegistryEntry | undefined> {
   const all = await getRegistry();
   return all.find((e) => e.record.pin === pin);
+}
+
+export interface OrgEntry {
+  /** The org's ENS name, e.g. "acme.safeskills.eth". */
+  name: string;
+  /** The org label, e.g. "acme". */
+  label: string;
+  /** The registry root the org sits under, e.g. "safeskills.eth". */
+  root: string;
+  /** The org's skills (each a resolved registry entry). */
+  skills: RegistryEntry[];
+  counts: { total: number; verified: number; poisoned: number; pending: number; revoked: number };
+}
+
+/**
+ * The companies on the registry, derived from the skill names. A skill
+ * `weather.acme.safeskills.eth` belongs to org `acme.safeskills.eth` — i.e. the
+ * name with its leftmost (skill) label dropped.
+ */
+export async function getOrgs(): Promise<OrgEntry[]> {
+  const byOrg = new Map<string, RegistryEntry[]>();
+  for (const entry of await getRegistry()) {
+    const labels = entry.record.name.split(".");
+    const orgName = labels.length > 2 ? labels.slice(1).join(".") : entry.record.name;
+    const list = byOrg.get(orgName) ?? [];
+    list.push(entry);
+    byOrg.set(orgName, list);
+  }
+
+  return [...byOrg.entries()]
+    .map(([name, skills]) => {
+      const counts = { total: skills.length, verified: 0, poisoned: 0, pending: 0, revoked: 0 };
+      for (const s of skills) if (s.status in counts) counts[s.status as keyof typeof counts]++;
+      const labels = name.split(".");
+      return { name, label: labels[0] ?? name, root: labels.slice(1).join("."), skills, counts };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export interface VerifyResponse {

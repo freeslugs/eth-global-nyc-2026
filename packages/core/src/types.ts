@@ -20,6 +20,12 @@ export interface SkillRecord {
   pin: SkillHash;
   /** safeskills.verdict — written by the Chainlink CRE (absent until reviewed). */
   verdict?: Verdict;
+  /**
+   * safeskills.attestation.<provider> records — one per third-party provider.
+   * The Chainlink CRE is the first provider (`chainlink.eth`); orgs can add
+   * others (e.g. an internal `my-local-verifier.eth`). Empty until reviewed.
+   */
+  attestations?: Attestation[];
   /** Resolved from contenthash (public skills only). */
   contentUri?: string;
   /** ENS name owner (the org). */
@@ -34,6 +40,26 @@ export interface Verdict {
   /** Chainlink Confidential AI attestation id. */
   attestationId: string;
   /** The hash the TEE actually reviewed — binds the verdict to specific bytes. */
+  reviewedHash: SkillHash;
+}
+
+/**
+ * A single provider's signed result for a skill, stored under the text record
+ * `safeskills.attestation.<provider>`. Each provider (a third-party vendor named
+ * by its own ENS name) writes ONLY its own slot — the org delegates write access
+ * per-key via the resolver. Consumers read the providers they trust and apply
+ * their policy (future: "trust acme when score > 70, else request a Ledger
+ * bypass"). The score lives in the record so the CLI/SDK can query it.
+ */
+export interface Attestation {
+  /** The provider's ENS name, e.g. "chainlink.eth". The record-key namespace. */
+  provider: string;
+  status: "pass" | "fail";
+  /** 0..100, higher = safer / more trusted (the headline score). */
+  score: number;
+  /** Provider-specific attestation id (Chainlink CRE id, CLI run id, …). */
+  attestationId: string;
+  /** The hash the provider reviewed — binds the attestation to specific bytes. */
   reviewedHash: SkillHash;
 }
 

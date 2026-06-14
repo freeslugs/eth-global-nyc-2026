@@ -137,7 +137,7 @@ export default function ThreatsPage() {
           Close the door before it&apos;s kicked in.
         </h2>
         <Link
-          href="/verify"
+          href="/sdk"
           className="mt-6 inline-block rounded-md bg-mint px-8 py-3.5 text-[17px] font-medium text-night transition-colors hover:bg-mint/90"
         >
           Get the SDK →

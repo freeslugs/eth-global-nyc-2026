@@ -13,7 +13,6 @@ export default async function SkillPage({ params }: { params: Promise<{ hash: st
   const entry = await getEntryByPin(decodeURIComponent(hash));
   if (!entry) notFound();
   const { record, status } = entry;
-  const verdict = record.verdict;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-12">
@@ -43,22 +42,28 @@ export default async function SkillPage({ params }: { params: Promise<{ hash: st
 
       <Card>
         <CardHeader>
-          <CardTitle>Verdict</CardTitle>
+          <CardTitle>Attestations</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 font-mono text-xs">
-          {!verdict && <p className="text-sm text-muted-foreground">No verdict written yet.</p>}
-          {verdict && (
-            <>
-              <div className="flex items-center gap-2">
-                <Badge variant={verdict.status === "pass" ? "neutral" : "revoked"}>
-                  {verdict.status}
-                </Badge>
-                <span className="text-muted-foreground">risk {verdict.riskScore}/100</span>
-              </div>
-              <Field label="attestation" value={verdict.attestationId || "—"} />
-              <Field label="reviewed hash" value={verdict.reviewedHash} />
-            </>
+        <CardContent className="space-y-4">
+          {(record.attestations ?? []).length === 0 && (
+            <p className="text-sm text-muted-foreground">No attestations written yet.</p>
           )}
+          {(record.attestations ?? []).map((a) => (
+            <div key={a.provider} className="space-y-1.5 border-b border-[#f5f4f1] pb-3 last:border-0 last:pb-0">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm">{a.provider}</span>
+                <Badge variant={a.status === "pass" ? "verified" : "poisoned"}>{a.status}</Badge>
+                <span className="ml-auto font-mono text-sm font-semibold">
+                  {a.score}
+                  <span className="text-muted-foreground">/100</span>
+                </span>
+              </div>
+              <div className="space-y-1 font-mono text-xs">
+                <Field label="attestation" value={a.attestationId || "—"} />
+                <Field label="reviewed hash" value={a.reviewedHash} />
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>

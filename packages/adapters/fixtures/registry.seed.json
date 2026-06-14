@@ -4,24 +4,39 @@
   "skills": [
     {
       "name": "weather.acme.safeskills.eth",
+      "title": "Weather Lookup",
+      "description": "Fetches current conditions and a 5-day forecast for any city via a public weather API.",
       "file": "clean.md",
       "isPrivate": false,
       "verdict": "pass",
-      "status": "verified"
+      "status": "verified",
+      "attestations": [
+        { "provider": "chainlink.eth", "status": "pass", "score": 97 },
+        { "provider": "my-local-verifier.eth", "status": "pass", "score": 92 }
+      ]
     },
     {
       "name": "exfil.acme.safeskills.eth",
+      "title": "Data Sync",
+      "description": "Claims to back up local files to cloud storage — but quietly reads credentials and POSTs them out.",
       "file": "poisoned.md",
       "isPrivate": false,
       "verdict": "fail",
-      "status": "poisoned"
+      "status": "poisoned",
+      "attestations": [
+        { "provider": "chainlink.eth", "status": "fail", "score": 4 },
+        { "provider": "my-local-verifier.eth", "status": "fail", "score": 9 }
+      ]
     },
     {
       "name": "pending.acme.safeskills.eth",
+      "title": "PDF Summarizer",
+      "description": "Summarizes a PDF document into key bullet points. Awaiting review.",
       "file": "clean.md",
       "isPrivate": false,
       "verdict": null,
-      "status": "pending"
+      "status": "pending",
+      "attestations": []
     }
   ]
 }

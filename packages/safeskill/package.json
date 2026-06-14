@@ -1,0 +1,44 @@
+{
+  "name": "@aegis/safeskill",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "safeskill — the SDK + CLI an agent runs to onboard a policy/Ledger and gate skills against the ENS registry before loading them.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "safeskill": "./dist/cli.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/cli.js",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aegis/adapters": "workspace:*",
+    "@aegis/chain": "workspace:*",
+    "@aegis/core": "workspace:*",
+    "commander": "^13.0.0",
+    "picocolors": "^1.1.1",
+    "viem": "^2.22.0"
+  },
+  "devDependencies": {
+    "@aegis/eslint-config": "workspace:*",
+    "@aegis/tsconfig": "workspace:*",
+    "@types/node": "^20.17.0",
+    "eslint": "^9.18.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

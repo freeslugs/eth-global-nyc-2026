@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getRegistry } from "@/lib/registry.server";
-import { shortHash } from "@/lib/utils";
+import { SkillList } from "@/components/skill-list";
 import { ArchitectureDiagram } from "@/components/architecture-diagram";
 
 export const runtime = "nodejs";
@@ -44,12 +44,6 @@ const THREATS = [
   },
 ];
 
-const STATUS_STYLE: Record<string, { label: string; cls: string; row: string }> = {
-  verified: { label: "✓ verified", cls: "text-accent", row: "bg-[#f3fbf7]" },
-  poisoned: { label: "✗ tampered", cls: "text-[#dc2626]", row: "bg-[#fef5f5]" },
-  revoked: { label: "⚠ revoked", cls: "text-[#d97706]", row: "bg-[#fffaf0]" },
-};
-
 export default async function HomePage() {
   const entries = await getRegistry();
 
@@ -71,7 +65,7 @@ export default async function HomePage() {
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
-                href="/verify"
+                href="/sdk"
                 className="rounded-md bg-ink px-6 py-3 text-base font-medium text-white transition-colors hover:bg-ink/90"
               >
                 Get the SDK →
@@ -84,22 +78,28 @@ export default async function HomePage() {
               </Link>
             </div>
             <div className="mt-8 rounded-[10px] bg-ink px-5 py-4 font-mono text-[13px] leading-[1.9] text-mint">
-              <div className="text-[#78716c]">$ npm i @aegis/cli</div>
-              <div>$ aegis verify web-scraper.skills.aegis.eth</div>
+              <div className="text-[#78716c]">$ npm i -g @aegis/safeskill</div>
+              <div>$ safeskill onboard --ledger --min-security 70</div>
+              <div>$ safeskill check weather.acme.safeskills.eth</div>
             </div>
           </div>
 
           {/* terminal mock */}
           <div className="rounded-xl bg-night p-6 font-mono text-[13px] leading-[1.95] text-[#e7e5e4] shadow-2xl">
-            <div className="text-[#78716c]">$ aegis verify web-scraper.skills.aegis.eth</div>
-            <div className="text-[#34d399]">✓ content hash matches ENS pin</div>
-            <div className="text-[#34d399]">✓ AI attestor: safe · chainlink CRE</div>
-            <div className="text-[#34d399]">✓ policy ok · ledger:0x9f…21a</div>
-            <div className="text-mint">PASS — safe to load</div>
-            <div className="h-4" />
-            <div className="text-[#78716c]">$ aegis verify slack-notifier.skills.aegis.eth</div>
-            <div className="text-[#f87171]">✗ skill modified since attestation</div>
-            <div className="text-[#fca5a5]">BLOCKED — execution halted</div>
+            <div className="text-[#78716c]">$ safeskill onboard --ledger --min-security 70</div>
+            <div className="text-[#34d399]">✓ policy · auto-approve ≥ 70% · below → Ledger override</div>
+            <div className="h-3" />
+            <div className="text-[#78716c]">$ safeskill use weather.acme.safeskills.eth</div>
+            <div className="text-[#34d399]">✓ hash matches ENS pin · verdict pass · security 97%</div>
+            <div className="text-mint">AUTO-APPROVE — installed</div>
+            <div className="h-3" />
+            <div className="text-[#78716c]">$ safeskill use sync.evilcorp.safeskills.eth</div>
+            <div className="text-[#fbbf24]">⚠ verdict fail · security 4% — below policy</div>
+            <div className="text-[#fbbf24]">NEEDS OVERRIDE — Ledger signature required</div>
+            <div className="h-3" />
+            <div className="text-[#78716c]">$ safeskill use tampered.acme.safeskills.eth</div>
+            <div className="text-[#f87171]">✗ content hash ≠ pinned hash</div>
+            <div className="text-[#fca5a5]">BLOCKED — a signature can&apos;t override this</div>
           </div>
         </div>
       </section>
@@ -172,42 +172,13 @@ export default async function HomePage() {
               — resolve any skill and re-verify it against its on-chain record
             </span>
             <Link
-              href="/verify"
+              href="/registry"
               className="ml-auto rounded-full border border-[#e7e5e1] px-3.5 py-1.5 font-mono text-xs text-[#78716c] transition-colors hover:border-ink hover:text-ink"
             >
-              search skills.aegis.eth →
+              browse safeskills.eth →
             </Link>
           </div>
-          <div>
-            {entries.map(({ record, status: seedStatus }) => {
-              const status = STATUS_STYLE[seedStatus] ?? {
-                label: seedStatus,
-                cls: "text-[#78716c]",
-                row: "",
-              };
-              const verdictLabel = record.verdict
-                ? `${record.verdict.status} · risk ${record.verdict.riskScore}`
-                : "no verdict yet";
-              return (
-                <Link
-                  key={record.pin}
-                  href={`/a/${encodeURIComponent(record.pin)}`}
-                  className={`flex items-center gap-4 border-b border-[#f5f4f1] px-6 py-4 transition-colors last:border-0 hover:bg-[#faf9f7] ${status.row}`}
-                >
-                  <span className="flex-1 font-mono text-sm">{record.name}</span>
-                  <span className="hidden font-mono text-xs text-[#a8a29e] sm:block">
-                    {shortHash(record.pin, 6, 4)}
-                  </span>
-                  <span className="hidden w-40 text-xs text-[#a8a29e] sm:block">
-                    {verdictLabel}
-                  </span>
-                  <span className={`w-24 text-right text-[13px] font-medium ${status.cls}`}>
-                    {status.label}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
+          <SkillList entries={entries} />
         </div>
       </section>
 
@@ -229,7 +200,7 @@ export default async function HomePage() {
           Ship agents that can&apos;t be hijacked.
         </h2>
         <Link
-          href="/verify"
+          href="/sdk"
           className="mt-6 inline-block rounded-md bg-ink px-8 py-3.5 text-[17px] font-medium text-white transition-colors hover:bg-ink/90"
         >
           Get the SDK →

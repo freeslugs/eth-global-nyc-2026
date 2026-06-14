@@ -1,0 +1,248 @@
+import { Command } from "commander";
+import pc from "picocolors";
+import { Safeskill } from "./client";
+import { loadConfig, loadPolicyFile } from "./config";
+import { PRESETS } from "./policy";
+import type { Decision, SafeskillPolicy, SignerKind, SkillDecision } from "./types";
+
+const program = new Command();
+
+program
+  .name("safeskill")
+  .description("safeskill — onboard a policy/Ledger, then gate every skill against the ENS registry before loading it.")
+  .version("0.0.0");
+
+// ── formatting helpers ────────────────────────────────────────────────────────
+
+function badge(decision: Decision): string {
+  switch (decision) {
+    case "auto-approve":
+      return pc.bold(pc.green("AUTO-APPROVE"));
+    case "needs-override":
+      return pc.bold(pc.yellow("NEEDS OVERRIDE"));
+    case "blocked":
+      return pc.bold(pc.red("BLOCKED"));
+  }
+}
+
+function rating(d: SkillDecision): string {
+  return d.securityRating === undefined ? pc.dim("—  ") : `${String(d.securityRating).padStart(3)}%`;
+}
+
+function printDecision(d: SkillDecision): void {
+  console.log(pc.dim(`  name      ${d.record.name}`));
+  console.log(pc.dim(`  owner     ${d.record.owner}`));
+  console.log(pc.dim(`  pin       ${d.record.pin}`));
+  console.log(pc.dim(`  fetched   ${d.fetchedHash}`));
+  if (d.record.verdict) {
+    console.log(pc.dim(`  verdict   ${d.record.verdict.status} · risk ${d.record.verdict.riskScore} · security ${d.securityRating}%`));
+  } else {
+    console.log(pc.dim("  verdict   (none on the ENS name)"));
+  }
+  console.log(`\n  ${badge(d.decision)}  ${pc.dim(d.explanation)}`);
+}
+
+function printPolicy(p: SafeskillPolicy): void {
+  console.log(pc.bold(`  policy: ${p.name}`));
+  p.rules.forEach((r, i) => {
+    const cond: string[] = [];
+    if (r.minSecurityRating !== undefined) cond.push(`security ≥ ${r.minSecurityRating}`);
+    if (r.maxSecurityRating !== undefined) cond.push(`security ≤ ${r.maxSecurityRating}`);
+    if (r.verdictStatus) cond.push(`verdict=${r.verdictStatus}`);
+    if (r.hasVerdict !== undefined) cond.push(r.hasVerdict ? "has verdict" : "no verdict");
+    if (r.revoked !== undefined) cond.push(`revoked=${r.revoked}`);
+    if (r.publisherIn) cond.push(`publisher∈{${r.publisherIn.join(",")}}`);
+    if (r.publisherNotIn) cond.push(`publisher∉{${r.publisherNotIn.join(",")}}`);
+    console.log(`    ${String(i + 1).padStart(2)}. when ${pc.cyan(cond.length ? cond.join(" · ") : "always")} → ${badge(r.action)}` + (r.label ? pc.dim(`  (${r.label})`) : ""));
+  });
+  console.log(`    default → ${badge(p.default)}`);
+  console.log(pc.dim("    (integrity floor: content-hash mismatch is always BLOCKED, before any rule)"));
+}
+
+// ── Part 1: onboarding ──────────────────────────────────────────────────────
+
+program
+  .command("onboard")
+  .description("Hook up a signer (Ledger optional) and set a customizable policy.")
+  .option("--ledger", "authorize overrides with a real Ledger device")
+  .option("--local", "authorize overrides with a local dev key (demo, no device)")
+  .option("--no-signer", "don't hook up any signer (overrides become impossible)")
+  .option("--preset <name>", `use a named policy preset (${Object.keys(PRESETS).join(", ")})`)
+  .option("--policy <file>", "load a custom policy from a JSON file")
+  .option("-m, --min-security <n>", "convenience: auto-approve passing skills ≥ this security rating (0-100)")
+  .option("--no-require-verdict", "with --min-security: allow skills with no verdict")
+  .option("--ens", "read verdicts from real ENS (Sepolia) instead of the demo registry")
+  .action(
+    async (opts: {
+      ledger?: boolean;
+      local?: boolean;
+      signer?: boolean;
+      preset?: string;
+      policy?: string;
+      minSecurity?: string;
+      requireVerdict: boolean;
+      ens?: boolean;
+    }) => {
+      const signer: SignerKind = opts.signer === false ? "none" : opts.ledger ? "ledger" : "local";
+
+      // Build the policy override (precedence handled by Safeskill.onboard).
+      let policy: SafeskillPolicy | undefined;
+      let minSecurityRating: number | undefined;
+      if (opts.policy) {
+        try {
+          policy = await loadPolicyFile(opts.policy);
+        } catch (err) {
+          console.error(pc.red(`  ✗ could not load policy: ${(err as Error).message}`));
+          process.exit(1);
+        }
+      } else if (opts.minSecurity !== undefined) {
+        minSecurityRating = Number(opts.minSecurity);
+        if (!Number.isFinite(minSecurityRating) || minSecurityRating < 0 || minSecurityRating > 100) {
+          console.error(pc.red(`  ✗ --min-security must be 0–100 (got ${opts.minSecurity})`));
+          process.exit(1);
+        }
+      }
+
+      let ss: Safeskill;
+      try {
+        ss = await Safeskill.onboard({
+          signer,
+          resolver: opts.ens ? "ens" : "demo",
+          policy,
+          preset: opts.preset,
+          minSecurityRating,
+          requireVerdict: opts.requireVerdict,
+        });
+      } catch (err) {
+        console.error(pc.red(`  ✗ ${(err as Error).message}`));
+        process.exit(1);
+      }
+
+      const c = ss.config;
+      console.log(pc.bold(pc.green("\n  ✓ onboarded")));
+      console.log(pc.dim(`  signer     ${c.signer}${c.signerAddress ? ` (${c.signerAddress})` : ""}`));
+      if (c.signer === "ledger" && !c.signerAddress) {
+        console.log(pc.yellow("             (no address captured — connect the device before installing)"));
+      }
+      console.log(pc.dim(`  registry   ${c.resolver === "ens" ? "ENS (Sepolia)" : "demo (hardcoded)"}`));
+      console.log("");
+      printPolicy(c.policy);
+    },
+  );
+
+program
+  .command("status")
+  .description("Show the current onboarding config (signer + policy).")
+  .action(async () => {
+    const c = await loadConfig();
+    if (!c) {
+      console.log(pc.yellow("  not onboarded — run `safeskill onboard`"));
+      process.exit(0);
+    }
+    console.log(JSON.stringify(c, null, 2));
+  });
+
+program
+  .command("policy")
+  .description("Show the active policy, or list the available presets with --presets.")
+  .option("--presets", "list the built-in presets instead of the active policy")
+  .action(async (opts: { presets?: boolean }) => {
+    if (opts.presets) {
+      for (const [name, p] of Object.entries(PRESETS)) {
+        console.log("");
+        printPolicy({ ...p, name });
+      }
+      console.log("");
+      return;
+    }
+    const c = await loadConfig();
+    if (!c) {
+      console.log(pc.yellow("  not onboarded — run `safeskill onboard`"));
+      process.exit(0);
+    }
+    console.log("");
+    printPolicy(c.policy);
+    console.log("");
+  });
+
+// ── Part 2: skill fetching + gating ───────────────────────────────────────────
+
+program
+  .command("list")
+  .description("List the skills in the on-chain registry and what the policy would decide for each.")
+  .action(async () => {
+    const ss = await loadOrExit();
+    const skills = ss.listSkills();
+    console.log(pc.bold(`\n  ${skills.length} skills in the registry`) + pc.dim(`  (policy: ${ss.config.policy.name})\n`));
+    for (const s of skills) {
+      let d: SkillDecision;
+      try {
+        d = await ss.check(s.name);
+      } catch (err) {
+        console.log(`  ${pc.red("ERROR".padEnd(14))}  ${pc.dim("—  ")}  ${s.name} ${pc.dim(`(${(err as Error).message})`)}`);
+        continue;
+      }
+      console.log(`  ${badge(d.decision).padEnd(24)}  ${rating(d)}  ${s.name}`);
+      console.log(pc.dim(`  ${" ".repeat(14)}        ${s.description}`));
+    }
+    console.log("");
+  });
+
+program
+  .command("check")
+  .description("Resolve a skill against ENS, re-hash it, and report the decision (no install).")
+  .argument("<name>", "skill name (e.g. weather.acme.safeskills.eth)")
+  .action(async (name: string) => {
+    const ss = await loadOrExit();
+    try {
+      const d = await ss.check(name);
+      printDecision(d);
+      process.exit(d.decision === "blocked" ? 1 : 0);
+    } catch (err) {
+      console.error(pc.red(`\n  ✗ ERROR  ${(err as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+program
+  .command("use")
+  .description("Check a skill, then install it — auto-approving or requiring a Ledger override per policy.")
+  .argument("<name>", "skill name")
+  .option("-d, --dir <dir>", "install dir", ".skills")
+  .option("--no-override", "reject (don't even offer the Ledger override) for below-policy skills")
+  .action(async (name: string, opts: { dir: string; override: boolean }) => {
+    const ss = await loadOrExit();
+    try {
+      const d = await ss.check(name);
+      printDecision(d);
+
+      if (d.decision === "needs-override" && opts.override && ss.config.signer !== "none") {
+        console.log(pc.yellow(`\n  ⚠ below policy — authorizing override with ${ss.config.signer} signer…`));
+      }
+
+      const result = await ss.use(name, { dir: opts.dir, allowOverride: opts.override });
+      if (result.installed) {
+        const how = result.overridden ? pc.yellow("(Ledger override)") : pc.green("(auto-approved)");
+        console.log(pc.green(`\n  ✓ installed → ${result.path} `) + how);
+        process.exit(0);
+      } else {
+        // FAIL-CLOSED: nothing was written to disk.
+        console.log(pc.red(`\n  ✗ NOT installed — ${result.error ?? "rejected by policy"}`));
+        process.exit(1);
+      }
+    } catch (err) {
+      console.error(pc.red(`\n  ✗ ERROR  ${(err as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+async function loadOrExit(): Promise<Safeskill> {
+  try {
+    return await Safeskill.load();
+  } catch {
+    console.error(pc.red("  ✗ not onboarded — run `safeskill onboard` first"));
+    process.exit(1);
+  }
+}
+
+program.parseAsync(process.argv);

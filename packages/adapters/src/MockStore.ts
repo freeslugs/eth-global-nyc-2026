@@ -25,6 +25,7 @@ export class MockStore {
         owner: s.owner,
         contentUri: s.contentUri,
         verdict: s.verdict,
+        attestations: s.attestations,
       });
       this.nodeToName.set(s.node, s.name);
     }

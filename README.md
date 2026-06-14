@@ -22,6 +22,7 @@ apps/
   cli/           `safeskills` CLI: check / install / --no-ledger
   cre-workflow/  Chainlink CRE review job (DON-deployed / local runner — not hosted)
 packages/
+  safeskill/     @aegis/safeskill — the agent SDK + `safeskill` CLI: onboard (signer + policy) → gate skills (auto-approve / Ledger override / block)
   core/          @aegis/core     — types, ports, gate() + hashSkill (pure) + testing/ contract suites
   adapters/      @aegis/adapters — one module per port: mock (default) + real (stubbed) + contract test
   chain/         @aegis/chain    — viem clients, generated ABIs, addresses
@@ -135,7 +136,69 @@ pnpm install
 pnpm turbo build lint typecheck test   # all green
 ```
 
-### CLI demo (it really hashes the file — no hard-coded verdicts)
+### `safeskill` — the SDK + CLI your agent runs
+
+`@aegis/safeskill` is the agent-facing tool. It has **two parts**: (1) **onboard** — hook up a
+signer (Ledger optional) and set a customizable **policy**; (2) **gate** — before loading any skill
+it resolves the skill's verdict from the **ENS registry**, re-hashes the file locally, and decides
+**auto-approve / needs-override / blocked** per your policy. Below-policy skills require a **Ledger
+signature override**; a tampered file is always blocked. It runs offline against a hardcoded demo
+registry with zero chain config.
+
+```bash
+# build it once
+pnpm --filter @aegis/safeskill build
+
+# from the repo, the CLI is:  node packages/safeskill/dist/cli.js <cmd>
+# (or `npm i -g @aegis/safeskill` to get the `safeskill` binary on your PATH)
+alias safeskill="node $PWD/packages/safeskill/dist/cli.js"
+
+# 1) ONBOARD — set a policy (auto-approve passing skills ≥ 70% security; below → Ledger override).
+#    --local uses a dev key so the demo runs with no device; --ledger uses a real Ledger.
+safeskill onboard --local --min-security 70
+#    other ways to set policy:  --preset strict|permissive   --policy ./my-policy.json
+safeskill policy            # show the active ruleset    ·    safeskill policy --presets
+
+# 2) GATE — the registry + the decision the policy makes for each skill
+safeskill list
+
+# check one skill (resolve ENS → re-hash → decide; no install)
+safeskill check weather.acme.safeskills.eth        # AUTO-APPROVE (97% security)
+
+# use = check + install. auto-approve installs with no human; below-policy asks the signer.
+safeskill use weather.acme.safeskills.eth          # AUTO-APPROVE → installed, no signature
+safeskill use sync.evilcorp.safeskills.eth         # NEEDS OVERRIDE (verdict fail) → Ledger signs
+safeskill use tampered.acme.safeskills.eth         # BLOCKED — a signature can't override tampering
+```
+
+**Custom policy** is plain JSON (ordered rules, first match wins; `--policy ./file.json`):
+
+```json
+{
+  "name": "trust-acme-only",
+  "rules": [
+    { "publisherNotIn": ["acme.safeskills.eth"], "action": "blocked" },
+    { "minSecurityRating": 70, "verdictStatus": "pass", "action": "auto-approve" }
+  ],
+  "default": "needs-override"
+}
+```
+
+**SDK** (what an agent imports):
+
+```ts
+import { Safeskill } from "@aegis/safeskill";
+
+await Safeskill.onboard({ signer: "ledger", minSecurityRating: 70 }); // part 1
+const ss = await Safeskill.load();
+const result = await ss.use("weather.acme.safeskills.eth");           // part 2
+if (!result.installed) throw new Error(result.error);                  // fail-closed
+```
+
+Full docs + the policy model: [`packages/safeskill/README.md`](./packages/safeskill/README.md).
+`AEGIS_RESOLVER=ens` / `safeskill onboard --ens` swaps the demo registry for real ENS v2 on Sepolia.
+
+### Low-level CLI demo (`safeskills` — the engine `gate()`, no policy layer)
 
 ```bash
 pnpm --filter @aegis/cli build

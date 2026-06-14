@@ -1,13 +1,15 @@
 import { createConfig, http } from "wagmi";
 import { sepolia } from "wagmi/chains";
+import { injected } from "wagmi/connectors";
 
 /**
- * wagmi config for the web app. The explorer is read-only today (reads flow
- * through @aegis/adapters' mock store), but the wallet stack is wired so the
- * on-chain swap is a config change, not a rewrite.
+ * wagmi config for the web app. Reads flow through @aegis/adapters; writes
+ * (an org registering its name / submitting skills) are signed by the connected
+ * wallet — the org pays its own gas. `injected()` covers MetaMask/Rabby/Brave.
  */
 export const wagmiConfig = createConfig({
   chains: [sepolia],
+  connectors: [injected()],
   transports: {
     [sepolia.id]: http(),
   },

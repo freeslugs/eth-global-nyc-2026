@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { NAV_LINKS } from "@/lib/nav";
+import { NAV_LINKS, APP_NAV } from "@/lib/nav";
 
 export function MobileMenu() {
   const [open, setOpen] = React.useState(false);
@@ -49,12 +49,26 @@ export function MobileMenu() {
                     key={l.href}
                     href={l.href}
                     onClick={close}
-                    className="border-b border-[#f5f4f1] py-3 text-[15px] text-[#57534e] last:border-0 hover:text-ink"
+                    className="border-b border-[#f5f4f1] py-3 text-[15px] text-[#57534e] hover:text-ink"
                   >
                     {l.label}
                   </Link>
                 ),
               )}
+
+              <div className="px-1 pb-1 pt-4 text-[11px] font-medium uppercase tracking-[0.08em] text-[#a8a29e]">
+                {APP_NAV.label}
+              </div>
+              {APP_NAV.items.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  onClick={close}
+                  className="border-b border-[#f5f4f1] py-3 text-[15px] text-[#57534e] last:border-0 hover:text-ink"
+                >
+                  {l.label}
+                </Link>
+              ))}
             </div>
           </nav>
         </>
