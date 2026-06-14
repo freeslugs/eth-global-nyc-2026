@@ -227,7 +227,7 @@ export const verifiableFactoryAbi = [
     type: "event",
     inputs: [
       { name: "sender", type: "address", indexed: true },
-      { name: "proxyAddress", type: "address", indexed: false },
+      { name: "proxyAddress", type: "address", indexed: true },
       { name: "salt", type: "uint256", indexed: false },
       { name: "implementation", type: "address", indexed: false },
     ],

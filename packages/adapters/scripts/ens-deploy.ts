@@ -75,7 +75,7 @@ const pub = makePublicClient({ timeout: 30_000 });
 const wallet = makeWalletClient({ account, timeout: 30_000 });
 const chainId = pub.chain?.id ?? 11155111;
 const v2 = getEnsV2Addresses(chainId);
-
+// Resolver the skills are registered with + records written to. Default to the
 async function send(to: Address, data: Hex, what: string) {
   process.stdout.write(`  ${what} … `);
   const hash = await wallet.sendTransaction({ account: account!, chain: wallet.chain, to, data });
@@ -84,9 +84,13 @@ async function send(to: Address, data: Hex, what: string) {
   return receipt;
 }
 
-/** Deploy a UserRegistry proxy (admin = owner, ALL_ROLES) and return its address. */
-async function deployRegistry(label: string): Promise<Address> {
-  const salt = BigInt(labelhash(label)); // deterministic per label
+/**
+ * Deploy a VerifiableFactory proxy (admin = owner, ALL_ROLES) and return its
+ * address — used for both UserRegistry and PermissionedResolver proxies. `salt`
+ * must differ per proxy (the factory's CREATE2 address only depends on
+ * sender+salt), so we key it on a distinct label.
+ */
+async function deployProxy(impl: Address, saltLabel: string, what: string): Promise<Address> {
   const initData = encodeFunctionData({
     abi: proxyInitializeAbi,
     functionName: "initialize",
@@ -95,9 +99,9 @@ async function deployRegistry(label: string): Promise<Address> {
   const data = encodeFunctionData({
     abi: verifiableFactoryAbi,
     functionName: "deployProxy",
-    args: [v2.userRegistryImpl, salt, initData],
+    args: [impl, BigInt(labelhash(saltLabel)), initData],
   });
-  const receipt = await send(v2.verifiableFactory, data, `deploy registry for "${label}"`);
+  const receipt = await send(v2.verifiableFactory, data, what);
   for (const log of receipt.logs) {
     try {
       const ev = decodeEventLog({ abi: verifiableFactoryAbi, data: log.data, topics: log.topics });
@@ -106,15 +110,20 @@ async function deployRegistry(label: string): Promise<Address> {
       /* not our event */
     }
   }
-  throw new Error("deployRegistry: ProxyDeployed event not found in receipt");
+  throw new Error("deployProxy: ProxyDeployed event not found in receipt");
 }
+
+// The resolver the skills are registered with + records written to. Reuse one
+// via AEGIS_ENS_RESOLVER, else deploy a fresh PermissionedResolver you fully own
+// (so setText / authorizeTextRoles are guaranteed authorized).
+let RESOLVER: Address;
 
 /** register(label, owner, subregistry, resolver, ALL_ROLES, MAX_EXPIRY) on a registry. */
 function registerData(label: string, subregistry: Address): Hex {
   return encodeFunctionData({
     abi: permissionedRegistryAbi,
     functionName: "register",
-    args: [label, owner, subregistry, v2.publicResolver, ALL_ROLES, MAX_EXPIRY],
+    args: [label, owner, subregistry, RESOLVER, ALL_ROLES, MAX_EXPIRY],
   });
 }
 
@@ -127,10 +136,14 @@ const reuse = (k: string) => {
 console.log(`Deploying Aegis registry on chain ${chainId} as ${owner}`);
 console.log(`root ${ROOT}  org ${ORG}.${ROOT}  providers [${PROVIDERS.join(", ")}] -> ${providerAddr}\n`);
 
+// 0. resolver you fully own (reuse via AEGIS_ENS_RESOLVER, else deploy fresh).
+RESOLVER = reuse("AEGIS_ENS_RESOLVER") ?? (await deployProxy(v2.permissionedResolverImpl, "safeskills:resolver", "deploy resolver"));
+console.log(`  resolver: ${RESOLVER}\n`);
+
 // 1. safeskills.eth subregistry (where org subnames live) + attach to the 2LD.
 let rootRegistry = reuse("AEGIS_SAFESKILLS_REGISTRY");
 if (!rootRegistry) {
-  rootRegistry = await deployRegistry(ROOT.split(".")[0]);
+  rootRegistry = await deployProxy(v2.userRegistryImpl, ROOT.split(".")[0], `deploy registry for ${ROOT}`);
   await send(
     v2.ethRegistry,
     encodeFunctionData({
@@ -146,7 +159,7 @@ console.log(`  safeskills registry: ${rootRegistry}\n`);
 // 2. org subregistry (where skills live) + register the org subname.
 let orgRegistry = reuse("AEGIS_ACME_REGISTRY");
 if (!orgRegistry) {
-  orgRegistry = await deployRegistry(ORG);
+  orgRegistry = await deployProxy(v2.userRegistryImpl, ORG, `deploy registry for ${ORG}.${ROOT}`);
   await send(rootRegistry, registerData(ORG, orgRegistry), `register ${ORG}.${ROOT} -> ${owner}`);
 }
 console.log(`  ${ORG} registry: ${orgRegistry}\n`);
@@ -158,18 +171,18 @@ for (const skill of SKILLS) {
   console.log(`skill ${fqn}`);
   await send(orgRegistry, registerData(skill.label, ZERO), `register ${fqn}`);
   await send(
-    v2.publicResolver,
+    RESOLVER,
     encodeFunctionData({ abi: permissionedResolverAbi, functionName: "setText", args: [node, "safeskills.pin", pinOf(skill.file)] }),
     "setText safeskills.pin",
   );
   await send(
-    v2.publicResolver,
+    RESOLVER,
     encodeFunctionData({ abi: permissionedResolverAbi, functionName: "setAddr", args: [node, owner] }),
     "setAddr owner",
   );
   for (const provider of PROVIDERS) {
     await send(
-      v2.publicResolver,
+      RESOLVER,
       encodeFunctionData({
         abi: permissionedResolverAbi,
         functionName: "authorizeTextRoles",
@@ -180,11 +193,9 @@ for (const skill of SKILLS) {
   }
 }
 
-console.log(`\n✅ Done.`);
-console.log(`Resume env (if you re-run):`);
-console.log(`  AEGIS_SAFESKILLS_REGISTRY=${rootRegistry}`);
+console.log(`\n✅ Done. Save these to your .env:`);
+console.log(`  AEGIS_ENS_RESOLVER=${RESOLVER}          # also needed by attest.ts`);
+console.log(`  AEGIS_SAFESKILLS_REGISTRY=${rootRegistry}   # resume + web NEXT_PUBLIC_ORG_REGISTRY`);
 console.log(`  AEGIS_ACME_REGISTRY=${orgRegistry}`);
-console.log(`Web app — register orgs against the root registry:`);
-console.log(`  NEXT_PUBLIC_ORG_REGISTRY=${rootRegistry}`);
-console.log(`Score a skill (as a provider):`);
-console.log(`  node packages/adapters/scripts/attest.ts weather.${ORG}.${ROOT} pass 88 my-local-verifier.eth`);
+console.log(`\nScore a skill (as a provider):`);
+console.log(`  node --env-file=.env packages/adapters/scripts/attest.ts weather.${ORG}.${ROOT} pass 88 my-local-verifier.eth`);

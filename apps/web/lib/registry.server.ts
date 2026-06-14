@@ -19,10 +19,14 @@ function adapters(): Adapters {
   return adaptersSingleton;
 }
 
-/** All seeded skills, resolved to their current record (pin + verdict). */
+/**
+ * All seeded skills, resolved to their current record (pin + attestations).
+ * Resilient to names that don't resolve — in `ens` mode a seeded name may not be
+ * deployed on-chain yet, and one unresolved name shouldn't blank the whole page.
+ */
 export async function getRegistry(): Promise<RegistryEntry[]> {
   const a = adapters();
-  return Promise.all(
+  const settled = await Promise.allSettled(
     a.seed.map(async (s) => ({
       record: await a.resolver.resolve(s.name),
       title: s.title,
@@ -31,6 +35,14 @@ export async function getRegistry(): Promise<RegistryEntry[]> {
       fetchUri: s.fetchUri,
     })),
   );
+  for (const [i, r] of settled.entries()) {
+    if (r.status === "rejected") {
+      console.warn(`registry: skipping "${a.seed[i].name}" — ${(r.reason as Error).message}`);
+    }
+  }
+  return settled
+    .filter((r): r is PromiseFulfilledResult<RegistryEntry> => r.status === "fulfilled")
+    .map((r) => r.value);
 }
 
 /** A single entry by its pinned content hash. */

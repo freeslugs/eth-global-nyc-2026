@@ -78,7 +78,7 @@ export async function makeLedgerAccount(path = DEFAULT_LEDGER_PATH): Promise<Acc
     },
 
     async signTransaction(transaction, { serializer = serializeTransaction } = {}) {
-      const unsigned = (await serializer(transaction)).slice(2);
+      const unsigned = String(await serializer(transaction)).slice(2);
       const sig = await eth.signTransaction(path, unsigned, null);
       // Re-serialize WITH the signature the device returned.
       return serializer(transaction, {
