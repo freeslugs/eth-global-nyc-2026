@@ -5,7 +5,10 @@ import { getRegistry, type RegistryEntry } from "@/lib/registry.server";
 import { EnsName } from "@/components/ens-name";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// ISR: re-scan the chain at most every 30s (a new skill appears within that
+// window) instead of on every request — the on-chain enumeration is a batch of
+// getLogs calls we don't want to repeat per page view / Vercel cold start.
+export const revalidate = 30;
 
 export const metadata: Metadata = {
   title: "Registry — Aegis",

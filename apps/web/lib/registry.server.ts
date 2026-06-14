@@ -1,5 +1,6 @@
 import { gate, hashSkill, type GateResult, type SkillRecord, type Verdict } from "@aegis/core";
 import { buildAdapters, type Adapters, type SkillStatus } from "@aegis/adapters";
+import { discoverSkillNames } from "./discovery.server";
 
 export interface RegistryEntry {
   record: SkillRecord;
@@ -19,25 +20,70 @@ function adapters(): Adapters {
   return adaptersSingleton;
 }
 
+/** "web-scraper" / "weather_v2" -> "Web Scraper" / "Weather V2" for a discovered skill. */
+function prettyLabel(label: string): string {
+  return label
+    .split(/[-_.]/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** Demo status badge for a discovered skill, derived from its on-chain verdict. */
+function deriveStatus(record: SkillRecord): SkillStatus {
+  if (record.verdict?.status === "pass") return "verified";
+  if (record.verdict?.status === "fail") return "poisoned";
+  return "pending";
+}
+
+/** A registry entry for a skill discovered on-chain (no seed metadata to draw on). */
+function entryFromRecord(record: SkillRecord): RegistryEntry {
+  const [skill, ...rest] = record.name.split(".");
+  const org = rest.length > 1 ? rest.slice(0, -1).join(".") : rest.join(".");
+  return {
+    record,
+    title: prettyLabel(skill ?? record.name),
+    description: org ? `Published under ${org}` : "On-chain skill",
+    status: deriveStatus(record),
+    fetchUri: "",
+  };
+}
+
 /**
- * All seeded skills, resolved to their current record (pin + attestations).
- * Resilient to names that don't resolve — in `ens` mode a seeded name may not be
- * deployed on-chain yet, and one unresolved name shouldn't blank the whole page.
+ * The live catalog, resolved to current records (pin + attestations). In `ens`
+ * mode we ENUMERATE the registry on-chain (companies → their subregistries →
+ * skills) and union that with the seed, so anything created via the app appears
+ * without editing the seed file. Resilient to names that don't resolve — a name
+ * mid-creation, or a seeded name not deployed on this chain, shouldn't blank the
+ * whole page.
  */
 export async function getRegistry(): Promise<RegistryEntry[]> {
   const a = adapters();
+  const seedByName = new Map(a.seed.map((s) => [s.name, s]));
+
+  // Union seed names with whatever is live on-chain (ens mode only).
+  const names = new Set(a.seed.map((s) => s.name));
+  if (process.env.AEGIS_RESOLVER === "ens") {
+    try {
+      for (const name of await discoverSkillNames()) names.add(name);
+    } catch (e) {
+      console.warn(`registry: on-chain discovery failed — ${(e as Error).message}`);
+    }
+  }
+
+  const list = [...names];
   const settled = await Promise.allSettled(
-    a.seed.map(async (s) => ({
-      record: await a.resolver.resolve(s.name),
-      title: s.title,
-      description: s.description,
-      status: s.status,
-      fetchUri: s.fetchUri,
-    })),
+    list.map(async (name): Promise<RegistryEntry> => {
+      const record = await a.resolver.resolve(name);
+      const s = seedByName.get(name);
+      return s
+        ? { record, title: s.title, description: s.description, status: s.status, fetchUri: s.fetchUri }
+        : entryFromRecord(record);
+    }),
   );
   for (const [i, r] of settled.entries()) {
     if (r.status === "rejected") {
-      console.warn(`registry: skipping "${a.seed[i]!.name}" — ${(r.reason as Error).message}`);
+      console.warn(`registry: skipping "${list[i]!}" — ${(r.reason as Error).message}`);
     }
   }
   return settled

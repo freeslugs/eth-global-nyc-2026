@@ -4,7 +4,8 @@ import { getOrgs, type OrgEntry } from "@/lib/registry.server";
 import { EnsName } from "@/components/ens-name";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// ISR: re-scan the chain at most every 30s instead of per request — see /registry.
+export const revalidate = 30;
 
 export const metadata: Metadata = {
   title: "Companies — Aegis",
