@@ -37,7 +37,7 @@ export async function getRegistry(): Promise<RegistryEntry[]> {
   );
   for (const [i, r] of settled.entries()) {
     if (r.status === "rejected") {
-      console.warn(`registry: skipping "${a.seed[i].name}" — ${(r.reason as Error).message}`);
+      console.warn(`registry: skipping "${a.seed[i]!.name}" — ${(r.reason as Error).message}`);
     }
   }
   return settled
