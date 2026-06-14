@@ -147,7 +147,7 @@ function RegisterBody() {
   );
 }
 
-type OrgStep = "idle" | "registry" | "resolver" | "register" | "done";
+type OrgStep = "idle" | "authorizing" | "registry" | "resolver" | "register" | "done";
 
 /**
  * The companies this wallet already owns, derived from the registry: a skill
@@ -203,6 +203,7 @@ function CompanyPanel({
   const registryRef = useRef<Address | undefined>(undefined);
   const resolverRef = useRef<Address | undefined>(undefined);
   const [step, setStep] = useState<OrgStep>("idle");
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const fullName = `${company || "your-company"}.${ROOT}`;
   const ready = Boolean(company && address && ORG_REGISTRY && !exists);
@@ -235,8 +236,26 @@ function CompanyPanel({
     }
   }, [isSuccess, receipt, hash, step, company, address, writeContract, onCreated]);
 
-  function create() {
+  async function create() {
     if (!ready) return;
+    setAuthError(null);
+    // Authorize this wallet to register under safeskills.eth (server grants
+    // ROLE_REGISTRAR with the admin key) BEFORE the user's own register tx.
+    setStep("authorizing");
+    try {
+      const res = await fetch("/api/authorize", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ address }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) throw new Error(data.error ?? "authorization failed");
+    } catch (e) {
+      setAuthError((e as Error).message);
+      setStep("idle");
+      return;
+    }
+
     reset();
     processed.current = undefined;
     registryRef.current = undefined;
@@ -250,15 +269,17 @@ function CompanyPanel({
     });
   }
 
-  const busy = step === "registry" || step === "resolver" || step === "register";
+  const busy = step !== "idle" && step !== "done";
   const label3 =
-    step === "registry"
-      ? "Deploying registry…"
-      : step === "resolver"
-        ? "Deploying resolver…"
-        : step === "register"
-          ? "Registering company…"
-          : "Create company →";
+    step === "authorizing"
+      ? "Authorizing…"
+      : step === "registry"
+        ? "Deploying registry…"
+        : step === "resolver"
+          ? "Deploying resolver…"
+          : step === "register"
+            ? "Registering company…"
+            : "Create company →";
 
   // Still checking the registry — hold the slot so owners never see the form flash.
   // (Skip while a creation is in flight so the tx progress button stays visible.)
@@ -340,6 +361,7 @@ function CompanyPanel({
         </button>
       )}
 
+      {authError && <p className="break-words text-sm text-[#dc2626]">{authError}</p>}
       {error && (
         <p className="break-words text-sm text-[#dc2626]">
           {(error as { shortMessage?: string }).shortMessage ?? error.message}
