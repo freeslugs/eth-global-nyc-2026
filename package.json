@@ -8,7 +8,15 @@
     "node": ">=24"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "bufferutil",
+      "esbuild",
+      "keccak",
+      "node-hid",
+      "sharp",
+      "usb",
+      "utf-8-validate"
+    ]
   },
   "scripts": {
     "build": "turbo run build",

@@ -22,6 +22,8 @@
   "dependencies": {
     "@aegis/chain": "workspace:*",
     "@aegis/core": "workspace:*",
+    "@ledgerhq/hw-app-eth": "^6.45.0",
+    "@ledgerhq/hw-transport-node-hid": "^6.29.0",
     "@noble/curves": "^1.8.0",
     "@noble/hashes": "^1.7.0",
     "viem": "^2.22.0"

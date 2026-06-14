@@ -173,6 +173,12 @@ importers:
       '@aegis/core':
         specifier: workspace:*
         version: link:../core
+      '@ledgerhq/hw-app-eth':
+        specifier: ^6.45.0
+        version: 6.47.1(react@19.0.0)
+      '@ledgerhq/hw-transport-node-hid':
+        specifier: ^6.29.0
+        version: 6.33.4
       '@noble/curves':
         specifier: ^1.8.0
         version: 1.9.7
@@ -235,7 +241,7 @@ importers:
     optionalDependencies:
       '@ledgerhq/hw-app-eth':
         specifier: ^6.45.0
-        version: 6.47.1(react@19.0.0)
+        version: 6.47.1(react@19.2.7)
       '@ledgerhq/hw-transport-node-hid':
         specifier: ^6.29.0
         version: 6.33.4
@@ -4874,7 +4880,6 @@ snapshots:
       '@ethersproject/logger': 5.8.0
       '@ethersproject/properties': 5.8.0
       '@ethersproject/strings': 5.8.0
-    optional: true
 
   '@ethersproject/abstract-provider@5.8.0':
     dependencies:
@@ -4885,7 +4890,6 @@ snapshots:
       '@ethersproject/properties': 5.8.0
       '@ethersproject/transactions': 5.8.0
       '@ethersproject/web': 5.8.0
-    optional: true
 
   '@ethersproject/abstract-signer@5.8.0':
     dependencies:
@@ -4894,7 +4898,6 @@ snapshots:
       '@ethersproject/bytes': 5.8.0
       '@ethersproject/logger': 5.8.0
       '@ethersproject/properties': 5.8.0
-    optional: true
 
   '@ethersproject/address@5.8.0':
     dependencies:
@@ -4903,29 +4906,24 @@ snapshots:
       '@ethersproject/keccak256': 5.8.0
       '@ethersproject/logger': 5.8.0
       '@ethersproject/rlp': 5.8.0
-    optional: true
 
   '@ethersproject/base64@5.8.0':
     dependencies:
       '@ethersproject/bytes': 5.8.0
-    optional: true
 
   '@ethersproject/bignumber@5.8.0':
     dependencies:
       '@ethersproject/bytes': 5.8.0
       '@ethersproject/logger': 5.8.0
       bn.js: 5.2.3
-    optional: true
 
   '@ethersproject/bytes@5.8.0':
     dependencies:
       '@ethersproject/logger': 5.8.0
-    optional: true
 
   '@ethersproject/constants@5.8.0':
     dependencies:
       '@ethersproject/bignumber': 5.8.0
-    optional: true
 
   '@ethersproject/hash@5.8.0':
     dependencies:
@@ -4938,32 +4936,26 @@ snapshots:
       '@ethersproject/logger': 5.8.0
       '@ethersproject/properties': 5.8.0
       '@ethersproject/strings': 5.8.0
-    optional: true
 
   '@ethersproject/keccak256@5.8.0':
     dependencies:
       '@ethersproject/bytes': 5.8.0
       js-sha3: 0.8.0
-    optional: true
 
-  '@ethersproject/logger@5.8.0':
-    optional: true
+  '@ethersproject/logger@5.8.0': {}
 
   '@ethersproject/networks@5.8.0':
     dependencies:
       '@ethersproject/logger': 5.8.0
-    optional: true
 
   '@ethersproject/properties@5.8.0':
     dependencies:
       '@ethersproject/logger': 5.8.0
-    optional: true
 
   '@ethersproject/rlp@5.8.0':
     dependencies:
       '@ethersproject/bytes': 5.8.0
       '@ethersproject/logger': 5.8.0
-    optional: true
 
   '@ethersproject/signing-key@5.8.0':
     dependencies:
@@ -4973,14 +4965,12 @@ snapshots:
       bn.js: 5.2.3
       elliptic: 6.6.1
       hash.js: 1.1.7
-    optional: true
 
   '@ethersproject/strings@5.8.0':
     dependencies:
       '@ethersproject/bytes': 5.8.0
       '@ethersproject/constants': 5.8.0
       '@ethersproject/logger': 5.8.0
-    optional: true
 
   '@ethersproject/transactions@5.8.0':
     dependencies:
@@ -4993,7 +4983,6 @@ snapshots:
       '@ethersproject/properties': 5.8.0
       '@ethersproject/rlp': 5.8.0
       '@ethersproject/signing-key': 5.8.0
-    optional: true
 
   '@ethersproject/web@5.8.0':
     dependencies:
@@ -5002,7 +4991,6 @@ snapshots:
       '@ethersproject/logger': 5.8.0
       '@ethersproject/properties': 5.8.0
       '@ethersproject/strings': 5.8.0
-    optional: true
 
   '@gemini-wallet/core@0.3.2(viem@2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76))':
     dependencies:
@@ -5147,6 +5135,15 @@ snapshots:
     transitivePeerDependencies:
       - react
       - react-redux
+
+  '@ledgerhq/client-ids@0.10.2(react@19.2.7)':
+    dependencies:
+      '@ledgerhq/live-env': 2.38.0
+      '@reduxjs/toolkit': 2.11.2(react@19.2.7)
+      uuid: 9.0.1
+    transitivePeerDependencies:
+      - react
+      - react-redux
     optional: true
 
   '@ledgerhq/cryptoassets-evm-signatures@13.7.1':
@@ -5155,7 +5152,6 @@ snapshots:
       axios: 1.12.2
     transitivePeerDependencies:
       - debug
-    optional: true
 
   '@ledgerhq/devices@8.15.1':
     dependencies:
@@ -5163,7 +5159,6 @@ snapshots:
       '@ledgerhq/logs': 6.17.0
       rxjs: 7.8.2
       semver: 7.7.3
-    optional: true
 
   '@ledgerhq/devices@8.7.0':
     dependencies:
@@ -5171,7 +5166,6 @@ snapshots:
       '@ledgerhq/logs': 6.17.0
       rxjs: 7.8.2
       semver: 7.8.4
-    optional: true
 
   '@ledgerhq/domain-service@1.8.6':
     dependencies:
@@ -5185,10 +5179,8 @@ snapshots:
     transitivePeerDependencies:
       - debug
       - react-redux
-    optional: true
 
-  '@ledgerhq/errors@6.36.0':
-    optional: true
+  '@ledgerhq/errors@6.36.0': {}
 
   '@ledgerhq/evm-tools@1.12.9':
     dependencies:
@@ -5199,7 +5191,6 @@ snapshots:
       crypto-js: 4.2.0
     transitivePeerDependencies:
       - debug
-    optional: true
 
   '@ledgerhq/hw-app-eth@6.47.1(react@19.0.0)':
     dependencies:
@@ -5221,6 +5212,27 @@ snapshots:
       - debug
       - react
       - react-redux
+
+  '@ledgerhq/hw-app-eth@6.47.1(react@19.2.7)':
+    dependencies:
+      '@ethersproject/abi': 5.8.0
+      '@ethersproject/rlp': 5.8.0
+      '@ethersproject/transactions': 5.8.0
+      '@ledgerhq/cryptoassets-evm-signatures': 13.7.1
+      '@ledgerhq/domain-service': 1.8.6
+      '@ledgerhq/errors': 6.36.0
+      '@ledgerhq/evm-tools': 1.12.9
+      '@ledgerhq/hw-transport': 6.31.13
+      '@ledgerhq/hw-transport-mocker': 6.34.4
+      '@ledgerhq/logs': 6.17.0
+      '@ledgerhq/types-live': 6.111.0(react@19.2.7)
+      axios: 1.12.2
+      bignumber.js: 9.3.1
+      semver: 7.8.4
+    transitivePeerDependencies:
+      - debug
+      - react
+      - react-redux
     optional: true
 
   '@ledgerhq/hw-transport-mocker@6.34.4':
@@ -5228,7 +5240,6 @@ snapshots:
       '@ledgerhq/hw-transport': 6.35.4
       '@ledgerhq/logs': 6.17.0
       rxjs: 7.8.2
-    optional: true
 
   '@ledgerhq/hw-transport-node-hid-noevents@6.35.4':
     dependencies:
@@ -5237,7 +5248,6 @@ snapshots:
       '@ledgerhq/hw-transport': 6.35.4
       '@ledgerhq/logs': 6.17.0
       node-hid: 2.1.2
-    optional: true
 
   '@ledgerhq/hw-transport-node-hid@6.33.4':
     dependencies:
@@ -5249,7 +5259,6 @@ snapshots:
       lodash: 4.18.1
       node-hid: 2.1.2
       usb: 2.9.0
-    optional: true
 
   '@ledgerhq/hw-transport@6.31.13':
     dependencies:
@@ -5257,7 +5266,6 @@ snapshots:
       '@ledgerhq/errors': 6.36.0
       '@ledgerhq/logs': 6.17.0
       events: 3.3.0
-    optional: true
 
   '@ledgerhq/hw-transport@6.35.4':
     dependencies:
@@ -5265,20 +5273,26 @@ snapshots:
       '@ledgerhq/errors': 6.36.0
       '@ledgerhq/logs': 6.17.0
       events: 3.3.0
-    optional: true
 
   '@ledgerhq/live-env@2.38.0':
     dependencies:
       rxjs: 7.8.2
       utility-types: 3.11.0
-    optional: true
 
-  '@ledgerhq/logs@6.17.0':
-    optional: true
+  '@ledgerhq/logs@6.17.0': {}
 
   '@ledgerhq/types-live@6.111.0(react@19.0.0)':
     dependencies:
       '@ledgerhq/client-ids': 0.10.2(react@19.0.0)
+      bignumber.js: 9.3.1
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - react
+      - react-redux
+
+  '@ledgerhq/types-live@6.111.0(react@19.2.7)':
+    dependencies:
+      '@ledgerhq/client-ids': 0.10.2(react@19.2.7)
       bignumber.js: 9.3.1
       rxjs: 7.8.2
     transitivePeerDependencies:
@@ -5559,6 +5573,17 @@ snapshots:
       reselect: 5.2.0
     optionalDependencies:
       react: 19.0.0
+
+  '@reduxjs/toolkit@2.11.2(react@19.2.7)':
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      '@standard-schema/utils': 0.3.0
+      immer: 11.1.8
+      redux: 5.0.1
+      redux-thunk: 3.1.0(redux@5.0.1)
+      reselect: 5.2.0
+    optionalDependencies:
+      react: 19.2.7
     optional: true
 
   '@reown/appkit-common@1.7.8(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.22.4)':
@@ -6390,11 +6415,9 @@ snapshots:
     transitivePeerDependencies:
       - fastestsmallesttextencoderdecoder
 
-  '@standard-schema/spec@1.1.0':
-    optional: true
+  '@standard-schema/spec@1.1.0': {}
 
-  '@standard-schema/utils@0.3.0':
-    optional: true
+  '@standard-schema/utils@0.3.0': {}
 
   '@swc/helpers@0.5.15':
     dependencies:
@@ -6458,8 +6481,7 @@ snapshots:
 
   '@types/trusted-types@2.0.7': {}
 
-  '@types/w3c-web-usb@1.0.14':
-    optional: true
+  '@types/w3c-web-usb@1.0.14': {}
 
   '@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)':
     dependencies:
@@ -7325,7 +7347,6 @@ snapshots:
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
       - debug
-    optional: true
 
   axios@1.13.5:
     dependencies:
@@ -7334,7 +7355,6 @@ snapshots:
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
       - debug
-    optional: true
 
   axios@1.16.0:
     dependencies:
@@ -7356,25 +7376,21 @@ snapshots:
 
   big.js@6.2.2: {}
 
-  bignumber.js@9.3.1:
-    optional: true
+  bignumber.js@9.3.1: {}
 
   binary-extensions@2.3.0: {}
 
   bindings@1.5.0:
     dependencies:
       file-uri-to-path: 1.0.0
-    optional: true
 
   bl@4.1.0:
     dependencies:
       buffer: 5.7.1
       inherits: 2.0.4
       readable-stream: 3.6.2
-    optional: true
 
-  bn.js@4.12.3:
-    optional: true
+  bn.js@4.12.3: {}
 
   bn.js@5.2.3: {}
 
@@ -7393,8 +7409,7 @@ snapshots:
     dependencies:
       fill-range: 7.1.1
 
-  brorand@1.1.0:
-    optional: true
+  brorand@1.1.0: {}
 
   browserslist@4.28.2:
     dependencies:
@@ -7412,7 +7427,6 @@ snapshots:
     dependencies:
       base64-js: 1.5.1
       ieee754: 1.2.1
-    optional: true
 
   buffer@6.0.3:
     dependencies:
@@ -7505,8 +7519,7 @@ snapshots:
     dependencies:
       readdirp: 5.0.0
 
-  chownr@1.1.4:
-    optional: true
+  chownr@1.1.4: {}
 
   class-variance-authority@0.7.1:
     dependencies:
@@ -7576,8 +7589,7 @@ snapshots:
 
   crypt@0.0.2: {}
 
-  crypto-js@4.2.0:
-    optional: true
+  crypto-js@4.2.0: {}
 
   cssesc@3.0.0: {}
 
@@ -7604,14 +7616,12 @@ snapshots:
   decompress-response@6.0.0:
     dependencies:
       mimic-response: 3.1.0
-    optional: true
 
   dedent@0.7.0: {}
 
   deep-eql@5.0.2: {}
 
-  deep-extend@0.6.0:
-    optional: true
+  deep-extend@0.6.0: {}
 
   deep-is@0.1.4: {}
 
@@ -7633,8 +7643,7 @@ snapshots:
 
   detect-browser@5.3.0: {}
 
-  detect-libc@2.1.2:
-    optional: true
+  detect-libc@2.1.2: {}
 
   didyoumean@1.2.2: {}
 
@@ -7669,7 +7678,6 @@ snapshots:
   eip55@2.1.1:
     dependencies:
       keccak: 3.0.4
-    optional: true
 
   electron-to-chromium@1.5.372: {}
 
@@ -7682,7 +7690,6 @@ snapshots:
       inherits: 2.0.4
       minimalistic-assert: 1.0.1
       minimalistic-crypto-utils: 1.0.1
-    optional: true
 
   emoji-regex@8.0.0: {}
 
@@ -7935,8 +7942,7 @@ snapshots:
 
   events@3.3.0: {}
 
-  expand-template@2.0.3:
-    optional: true
+  expand-template@2.0.3: {}
 
   expect-type@1.3.0: {}
 
@@ -7979,8 +7985,7 @@ snapshots:
     dependencies:
       flat-cache: 4.0.1
 
-  file-uri-to-path@1.0.0:
-    optional: true
+  file-uri-to-path@1.0.0: {}
 
   fill-range@7.1.1:
     dependencies:
@@ -8027,8 +8032,7 @@ snapshots:
 
   fraction.js@5.3.4: {}
 
-  fs-constants@1.0.0:
-    optional: true
+  fs-constants@1.0.0: {}
 
   fsevents@2.3.3:
     optional: true
@@ -8057,8 +8061,7 @@ snapshots:
       dunder-proto: 1.0.1
       es-object-atoms: 1.1.2
 
-  github-from-package@0.0.0:
-    optional: true
+  github-from-package@0.0.0: {}
 
   glob-parent@5.1.2:
     dependencies:
@@ -8102,7 +8105,6 @@ snapshots:
     dependencies:
       inherits: 2.0.4
       minimalistic-assert: 1.0.1
-    optional: true
 
   hasown@2.0.4:
     dependencies:
@@ -8113,7 +8115,6 @@ snapshots:
       hash.js: 1.1.7
       minimalistic-assert: 1.0.1
       minimalistic-crypto-utils: 1.0.1
-    optional: true
 
   hono@4.12.25: {}
 
@@ -8127,8 +8128,7 @@ snapshots:
 
   ignore@7.0.5: {}
 
-  immer@11.1.8:
-    optional: true
+  immer@11.1.8: {}
 
   import-fresh@3.3.1:
     dependencies:
@@ -8139,8 +8139,7 @@ snapshots:
 
   inherits@2.0.4: {}
 
-  ini@1.3.8:
-    optional: true
+  ini@1.3.8: {}
 
   iron-webcrypto@1.2.1: {}
 
@@ -8214,8 +8213,7 @@ snapshots:
 
   joycon@3.1.1: {}
 
-  js-sha3@0.8.0:
-    optional: true
+  js-sha3@0.8.0: {}
 
   js-tokens@9.0.1: {}
 
@@ -8322,14 +8320,11 @@ snapshots:
     dependencies:
       mime-db: 1.52.0
 
-  mimic-response@3.1.0:
-    optional: true
+  mimic-response@3.1.0: {}
 
-  minimalistic-assert@1.0.1:
-    optional: true
+  minimalistic-assert@1.0.1: {}
 
-  minimalistic-crypto-utils@1.0.1:
-    optional: true
+  minimalistic-crypto-utils@1.0.1: {}
 
   minimatch@10.2.5:
     dependencies:
@@ -8339,15 +8334,13 @@ snapshots:
     dependencies:
       brace-expansion: 1.1.15
 
-  minimist@1.2.8:
-    optional: true
+  minimist@1.2.8: {}
 
   mipd@0.0.7(typescript@5.9.3):
     optionalDependencies:
       typescript: 5.9.3
 
-  mkdirp-classic@0.5.3:
-    optional: true
+  mkdirp-classic@0.5.3: {}
 
   mlly@1.8.2:
     dependencies:
@@ -8374,8 +8367,7 @@ snapshots:
     dependencies:
       picocolors: 1.1.1
 
-  napi-build-utils@2.0.0:
-    optional: true
+  napi-build-utils@2.0.0: {}
 
   natural-compare@1.4.0: {}
 
@@ -8405,15 +8397,12 @@ snapshots:
   node-abi@3.92.0:
     dependencies:
       semver: 7.8.4
-    optional: true
 
   node-addon-api@2.0.2: {}
 
-  node-addon-api@3.2.1:
-    optional: true
+  node-addon-api@3.2.1: {}
 
-  node-addon-api@6.1.0:
-    optional: true
+  node-addon-api@6.1.0: {}
 
   node-fetch-native@1.6.7: {}
 
@@ -8428,7 +8417,6 @@ snapshots:
       bindings: 1.5.0
       node-addon-api: 3.2.1
       prebuild-install: 7.1.3
-    optional: true
 
   node-mock-http@1.0.4: {}
 
@@ -8726,7 +8714,6 @@ snapshots:
       simple-get: 4.0.1
       tar-fs: 2.1.4
       tunnel-agent: 0.6.0
-    optional: true
 
   prelude-ls@1.2.1: {}
 
@@ -8738,8 +8725,7 @@ snapshots:
 
   proxy-compare@2.6.0: {}
 
-  proxy-from-env@1.1.0:
-    optional: true
+  proxy-from-env@1.1.0: {}
 
   proxy-from-env@2.1.0: {}
 
@@ -8776,21 +8762,18 @@ snapshots:
       ini: 1.3.8
       minimist: 1.2.8
       strip-json-comments: 2.0.1
-    optional: true
 
   react-dom@19.0.0(react@19.0.0):
     dependencies:
       react: 19.0.0
       scheduler: 0.25.0
-    optional: true
 
   react-dom@19.2.7(react@19.2.7):
     dependencies:
       react: 19.2.7
       scheduler: 0.27.0
 
-  react@19.0.0:
-    optional: true
+  react@19.0.0: {}
 
   react@19.2.7: {}
 
@@ -8827,17 +8810,14 @@ snapshots:
   redux-thunk@3.1.0(redux@5.0.1):
     dependencies:
       redux: 5.0.1
-    optional: true
 
-  redux@5.0.1:
-    optional: true
+  redux@5.0.1: {}
 
   require-directory@2.1.1: {}
 
   require-main-filename@2.0.0: {}
 
-  reselect@5.2.0:
-    optional: true
+  reselect@5.2.0: {}
 
   resolve-from@4.0.0: {}
 
@@ -8890,7 +8870,6 @@ snapshots:
   rxjs@7.8.2:
     dependencies:
       tslib: 2.8.1
-    optional: true
 
   safe-buffer@5.1.2: {}
 
@@ -8904,13 +8883,11 @@ snapshots:
 
   safe-stable-stringify@2.5.0: {}
 
-  scheduler@0.25.0:
-    optional: true
+  scheduler@0.25.0: {}
 
   scheduler@0.27.0: {}
 
-  semver@7.7.3:
-    optional: true
+  semver@7.7.3: {}
 
   semver@7.8.4: {}
 
@@ -8971,15 +8948,13 @@ snapshots:
 
   siginfo@2.0.0: {}
 
-  simple-concat@1.0.1:
-    optional: true
+  simple-concat@1.0.1: {}
 
   simple-get@4.0.1:
     dependencies:
       decompress-response: 6.0.0
       once: 1.4.0
       simple-concat: 1.0.1
-    optional: true
 
   socket.io-client@4.8.3(bufferutil@4.1.0)(utf-8-validate@5.0.10):
     dependencies:
@@ -9037,8 +9012,7 @@ snapshots:
     dependencies:
       ansi-regex: 5.0.1
 
-  strip-json-comments@2.0.1:
-    optional: true
+  strip-json-comments@2.0.1: {}
 
   strip-json-comments@3.1.1: {}
 
@@ -9105,7 +9079,6 @@ snapshots:
       mkdirp-classic: 0.5.3
       pump: 3.0.4
       tar-stream: 2.2.0
-    optional: true
 
   tar-stream@2.2.0:
     dependencies:
@@ -9114,7 +9087,6 @@ snapshots:
       fs-constants: 1.0.0
       inherits: 2.0.4
       readable-stream: 3.6.2
-    optional: true
 
   thenify-all@1.6.0:
     dependencies:
@@ -9205,7 +9177,6 @@ snapshots:
   tunnel-agent@0.6.0:
     dependencies:
       safe-buffer: 5.2.1
-    optional: true
 
   turbo@2.9.18:
     optionalDependencies:
@@ -9279,7 +9250,6 @@ snapshots:
       '@types/w3c-web-usb': 1.0.14
       node-addon-api: 6.1.0
       node-gyp-build: 4.8.4
-    optional: true
 
   use-sync-external-store@1.2.0(react@19.2.7):
     dependencies:
@@ -9303,8 +9273,7 @@ snapshots:
       is-typed-array: 1.1.15
       which-typed-array: 1.1.22
 
-  utility-types@3.11.0:
-    optional: true
+  utility-types@3.11.0: {}
 
   uuid@8.3.2: {}
 

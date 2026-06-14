@@ -1,18 +1,48 @@
 import { secp256k1 } from "@noble/curves/secp256k1";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { hashTypedData } from "viem";
 import type { AuthRequest, Hex } from "@aegis/core";
 
 /**
+ * ⚠️  CORE-CHANGE: migrated from raw keccak256(JSON) to EIP-712 typed data.
+ * This lets the Ledger Flex show structured fields (name, verdict, riskScore)
+ * instead of an opaque hex blob. Coordinated with core owner — see PR description.
+ *
  * Shared signing helpers for InstallSigner adapters. Both LocalSigner (dev key)
  * and LedgerSigner (device) produce/verify signatures over the SAME canonical
- * message, so the signerContract behaves identically for both — `verify()`
+ * EIP-712 digest, so the signerContract behaves identically for both — `verify()`
  * stays synchronous (no async chain recover).
  */
 
-/** Deterministic 32-byte digest of an AuthRequest. */
-export function authDigest(req: AuthRequest): Uint8Array {
-  const canonical = JSON.stringify({
+// ---------------------------------------------------------------------------
+// EIP-712 domain & types
+// ---------------------------------------------------------------------------
+
+/** Minimal domain — no verifyingContract/chainId so signatures are chain-agnostic. */
+export const EIP712_DOMAIN = {
+  name: "SafeSkills",
+  version: "1",
+} as const;
+
+export const EIP712_TYPES = {
+  Verdict: [
+    { name: "status", type: "string" },
+    { name: "riskScore", type: "uint8" },
+    { name: "attestationId", type: "string" },
+    { name: "reviewedHash", type: "string" },
+  ],
+  AuthRequest: [
+    { name: "node", type: "bytes32" },
+    { name: "name", type: "string" },
+    { name: "pin", type: "string" },
+    { name: "verdict", type: "Verdict" },
+  ],
+};
+
+/** Build the EIP-712 message value from an AuthRequest. */
+export function eip712Message(req: AuthRequest) {
+  return {
     node: req.node,
     name: req.name,
     pin: req.pin,
@@ -22,9 +52,27 @@ export function authDigest(req: AuthRequest): Uint8Array {
       attestationId: req.verdict.attestationId,
       reviewedHash: req.verdict.reviewedHash,
     },
-  });
-  return keccak_256(new TextEncoder().encode(canonical));
+  };
 }
+
+// ---------------------------------------------------------------------------
+// Digest
+// ---------------------------------------------------------------------------
+
+/** Deterministic 32-byte EIP-712 digest of an AuthRequest. */
+export function authDigest(req: AuthRequest): Uint8Array {
+  const hash = hashTypedData({
+    domain: EIP712_DOMAIN,
+    types: EIP712_TYPES,
+    primaryType: "AuthRequest",
+    message: eip712Message(req),
+  });
+  return hexToBytes(hash.slice(2));
+}
+
+// ---------------------------------------------------------------------------
+// Key / sign / recover
+// ---------------------------------------------------------------------------
 
 export function addressFromPrivateKey(priv: Uint8Array): Hex {
   const pub = secp256k1.getPublicKey(priv, false).slice(1); // drop 0x04 prefix
