@@ -4,6 +4,7 @@ import type {
   InstallSigner,
   VerdictWriter,
   SubmissionWatcher,
+  ReviewClient,
   Policy,
   Hex,
 } from "@aegis/core";
@@ -22,11 +23,13 @@ import { MockVerdictWriter } from "./verdict/MockVerdictWriter";
 import { EnsV2VerdictWriter } from "./verdict/EnsV2VerdictWriter";
 import { MockWatcher } from "./watcher/MockWatcher";
 import { ChainWatcher } from "./watcher/ChainWatcher";
+import { MockReview } from "./review/MockReview";
 
 export interface Adapters {
   resolver: SkillResolver;
   fetcher: SkillFetcher;
   signer: InstallSigner;
+  review: ReviewClient;
   verdict: VerdictWriter;
   watcher: SubmissionWatcher;
   /** The shared mock store (explorer views, submit→consume loop). Mock mode only. */
@@ -64,11 +67,13 @@ export function buildAdapters(env: NodeJS.ProcessEnv = process.env): Adapters {
       ? new LedgerSigner()
       : new LocalSigner(env.AEGIS_PRIVATE_KEY as Hex | undefined);
 
+  const review: ReviewClient = new MockReview();
+
   const verdict: VerdictWriter =
     env.AEGIS_VERDICT === "ens" ? new EnsV2VerdictWriter() : new MockVerdictWriter(store);
 
   const watcher: SubmissionWatcher =
     env.AEGIS_WATCHER === "chain" ? new ChainWatcher() : new MockWatcher();
 
-  return { resolver, fetcher, signer, verdict, watcher, store, seed: store.seeded, policy: defaultPolicy };
+  return { resolver, fetcher, signer, review, verdict, watcher, store, seed: store.seeded, policy: defaultPolicy };
 }
