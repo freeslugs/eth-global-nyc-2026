@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import {
+  useAccount,
+  useSwitchChain,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
+import { sepolia } from "wagmi/chains";
 import { zeroAddress } from "viem";
 import { namehash } from "viem/ens";
 import { ConnectButton } from "@/components/connect-button";
@@ -47,12 +53,28 @@ export default function RegisterPage() {
 }
 
 function RegisterBody() {
-  const { isConnected } = useAccount();
+  const { isConnected, chainId } = useAccount();
+  const { switchChain, isPending: switching } = useSwitchChain();
+
   if (!isConnected) {
     return (
       <div className="flex flex-col items-start gap-4 rounded-2xl border border-[#e7e5e1] bg-white p-8">
         <p className="text-[#57534e]">Connect a wallet to get started.</p>
         <ConnectButton />
+      </div>
+    );
+  }
+  if (chainId !== sepolia.id) {
+    return (
+      <div className="flex flex-col items-start gap-4 rounded-2xl border border-amber-300 bg-amber-50 p-8">
+        <p className="text-amber-800">Aegis runs on Sepolia. Switch your wallet to continue.</p>
+        <button
+          onClick={() => switchChain({ chainId: sepolia.id })}
+          disabled={switching}
+          className="rounded-md bg-amber-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-60"
+        >
+          {switching ? "Switching…" : "Switch to Sepolia"}
+        </button>
       </div>
     );
   }
