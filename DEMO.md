@@ -235,7 +235,7 @@ set up Safe Skills
    (no passing review). Approve: **type CONFIRM** (local signer) — Claude re-runs with
    `--confirm CONFIRM` — or **press Approve on the Ledger**. Then it installs.
 
-6. 🚫 BLOCKED → "install `stitch-skill.acme.safeskills.eth` from `<an-edited-SKILL.md>`"
+6. 🚫 BLOCKED → "install `weather.acme.safeskills.eth` from `<an-edited-SKILL.md>`"
    → gate runs `use … --file <edited.md>` → hash ≠ on-chain pin → **BLOCKED** (integrity
    floor). A signature can't override it.
 
