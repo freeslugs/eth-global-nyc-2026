@@ -247,41 +247,76 @@ program
 
 // ── bootstrap: install the gate into Claude Code ──────────────────────────────
 
-/** The `safeskills` meta-skill SKILL.md — teaches the agent to gate before installing. */
+/** The `safeskills` meta-skill SKILL.md — teaches the agent to onboard + gate. */
 function metaSkill(gate: string): string {
   return `---
 name: safeskills
-description: Gate any agent skill against the Aegis ENS registry before installing it into Claude Code. Use whenever the user asks to install, add, or load a skill — so tampered or unreviewed skills are blocked or require explicit sign-off, never trusted on the source's say-so.
+description: Gate any agent skill against the Aegis ENS registry before installing it into Claude Code, and walk the user through their security policy on first run. Use whenever the user asks to install/add/load a skill, or to set up or change Safe Skills.
 ---
 
 # Safe Skills — verify before you install
 
 You are the install gate for agent skills. NEVER hand-write a SKILL.md into
-\`~/.claude/skills/\` directly. Instead run the \`safeskill\` gate: it resolves the
-skill's pinned hash from the on-chain (ENS) registry, re-hashes the candidate
-file locally, and decides **auto-approve / needs-override (a signature) / blocked**.
+\`~/.claude/skills/\` directly. The \`safeskill\` CLI resolves a skill's pinned hash
+from the on-chain (ENS) registry, re-hashes the candidate file, and decides
+**auto-approve / needs-override (a signature) / blocked**, per the user's policy.
 
-## When the user asks to install / add / load a skill
+Gate command: \`${gate}\`
 
-1. Identify the skill's **ENS name** (e.g. \`weather.acme.safeskills.eth\`) and the
-   path to the **candidate SKILL.md** to install.
-2. Run the gate (it installs into Claude Code's layout on success):
+## Step 1 — make sure the user is set up (run this before gating)
 
-   \`\`\`
-   ${gate} use <ens-name> --file <path-to-SKILL.md> --claude
-   \`\`\`
+Run \`${gate} status\`. If it reports the user has NOT onboarded, set them up
+**conversationally** — ask, don't guess — then run \`onboard\`:
 
-3. Act on the result — and report it to the user verbatim:
-   - **installed** (auto-approved, or a signed override) → it passed the gate and
-     is now available; a new Claude Code session will discover it.
-   - **BLOCKED** → do NOT install. The content hash didn't match the on-chain pin
-     (possible tampering) — a signature cannot override this.
-   - **needs-override with no/declined signature** → not installed; explain why.
+1. "What security score (0–100, higher = safer) should let a skill install with no
+   questions asked?" → \`--min-security <N>\` (a sensible default is 70).
+2. "For reviewed skills below that line — require your signature, or block them?"
+   (sign ⇒ they stay \`needs-override\`; block ⇒ add a stricter rule).
+3. "Any publishers to ALWAYS trust or ALWAYS block?" (e.g. \`acme.safeskills.eth\`).
 
-Never bypass the gate. If the gate command is missing or errors, tell the user —
-do not fall back to writing the skill file yourself.
+Then onboard with the answer that fits:
+- Simple threshold → \`${gate} onboard --ens --local --min-security <N>\`
+- A named preset → \`${gate} onboard --ens --local --preset strict|default|permissive\`
+- Custom rules (trusted/blocked publishers, etc.) → write a policy JSON (schema
+  below) to a file, then \`${gate} onboard --ens --local --policy <file>\`.
 
-> One-time prereq (run once): \`${gate} onboard --ens --local --min-security 70\`
+Confirm with \`${gate} policy\` and show the user their active rules.
+
+### Policy schema (for \`--policy <file>\`)
+An ordered ruleset: rules are tried top-to-bottom, **first match wins**; if none
+match, \`default\` applies. Each rule ANDs its predicates.
+\`\`\`jsonc
+{
+  "name": "my-policy",
+  "rules": [
+    { "revoked": true, "action": "blocked" },
+    { "publisherNotIn": ["acme.safeskills.eth"], "action": "needs-override" },
+    { "minSecurityRating": 80, "verdictStatus": "pass", "action": "auto-approve" }
+  ],
+  "default": "needs-override"
+}
+\`\`\`
+Predicates: \`minSecurityRating\`/\`maxSecurityRating\`, \`verdictStatus\` ("pass"|"fail"),
+\`hasVerdict\`, \`revoked\`, \`publisherIn\`/\`publisherNotIn\`. Actions: \`auto-approve\`,
+\`needs-override\`, \`blocked\`. **Integrity floor:** a content-hash mismatch (tampering)
+is ALWAYS blocked, before any rule — no policy can approve tampered bytes.
+
+## Step 2 — gate every install
+
+When the user asks to install/add/load a skill, identify its **ENS name** and the
+path to the **candidate SKILL.md**, then run:
+\`\`\`
+${gate} use <ens-name> --file <path-to-SKILL.md> --claude
+\`\`\`
+Report the result to the user verbatim:
+- **installed** (auto-approved, or a signed override) → available after a new
+  Claude Code session discovers it.
+- **BLOCKED** → do NOT install. The hash didn't match the on-chain pin (possible
+  tampering) — a signature cannot override this.
+- **needs-override with no/declined signature** → not installed; explain why.
+
+Never bypass the gate or hand-write a skill file. If the gate command is missing
+or errors, tell the user instead of falling back.
 `;
 }
 
