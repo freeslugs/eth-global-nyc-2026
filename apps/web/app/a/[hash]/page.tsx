@@ -5,9 +5,13 @@ import { getEntryByPin } from "@/lib/registry.server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, statusVariant } from "@/components/ui/badge";
 import { EnsName } from "@/components/ens-name";
+import { statusMeta } from "@/lib/status";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// ISR: render once per hash, then serve from cache and revalidate in the
+// background. The expensive on-chain crawl is itself cached in registry.server,
+// so a cold render here usually reuses a warm crawl from the registry page.
+export const revalidate = 30;
 
 export default async function SkillPage({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = await params;
@@ -26,7 +30,7 @@ export default async function SkillPage({ params }: { params: Promise<{ hash: st
 
       <div className="flex items-center justify-between gap-3">
         <EnsName name={record.name} className="text-xl font-semibold" />
-        <Badge variant={statusVariant(status)}>{status}</Badge>
+        <Badge variant={statusVariant(status)}>{statusMeta(status).label}</Badge>
       </div>
 
       <Card>

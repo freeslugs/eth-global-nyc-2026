@@ -4,7 +4,7 @@ import { SkillList } from "@/components/skill-list";
 import { ArchitectureDiagram } from "@/components/architecture-diagram";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 const STEPS = [
   {

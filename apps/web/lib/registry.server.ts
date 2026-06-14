@@ -1,6 +1,10 @@
+import { unstable_cache } from "next/cache";
 import { gate, hashSkill, type GateResult, type SkillRecord, type Verdict } from "@aegis/core";
 import { buildAdapters, type Adapters, type SkillStatus } from "@aegis/adapters";
 import { discover } from "./discovery.server";
+
+/** Shared TTL for the on-chain crawl cache (seconds). */
+export const REGISTRY_REVALIDATE = 30;
 
 export interface RegistryEntry {
   record: SkillRecord;
@@ -68,7 +72,7 @@ function entryFromRecord(record: SkillRecord): RegistryEntry {
  * mid-creation, or a seeded name not deployed on this chain, shouldn't blank the
  * whole page.
  */
-export async function getRegistry(): Promise<RegistryEntry[]> {
+async function crawlRegistry(): Promise<RegistryEntry[]> {
   const a = adapters();
   const seedByName = new Map(a.seed.map((s) => [s.name, s]));
 
@@ -108,6 +112,18 @@ export async function getRegistry(): Promise<RegistryEntry[]> {
     .filter((r): r is PromiseFulfilledResult<RegistryEntry> => r.status === "fulfilled")
     .map((r) => r.value);
 }
+
+/**
+ * The cached catalog. The on-chain crawl (discovery + per-skill resolve) is the
+ * expensive part — dozens of sequential RPC round-trips — so we run it at most
+ * once per `REGISTRY_REVALIDATE` window and share the result across every page,
+ * the API route, and pin lookups. Bust it on demand with `revalidateTag("registry")`
+ * after a new skill is registered so it appears without waiting for the TTL.
+ */
+export const getRegistry = unstable_cache(crawlRegistry, ["aegis-registry"], {
+  revalidate: REGISTRY_REVALIDATE,
+  tags: ["registry"],
+});
 
 /** A single entry by its pinned content hash. */
 export async function getEntryByPin(pin: string): Promise<RegistryEntry | undefined> {
