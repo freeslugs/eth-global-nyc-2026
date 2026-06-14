@@ -1,0 +1,10 @@
+{
+  "extends": ["./tooling/typescript/base.json", "./tooling/typescript/ide.json"],
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["packages/*/scripts/**/*.ts"],
+  "exclude": ["node_modules", "**/dist", "**/node_modules"]
+}

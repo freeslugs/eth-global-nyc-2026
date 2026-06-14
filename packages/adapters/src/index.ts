@@ -15,7 +15,6 @@ export { LedgerSigner } from "./signer/LedgerSigner";
 export { authDigest, verifyAuth, recoverSigner } from "./signer/auth";
 // review
 export { MockReview } from "./review/MockReview";
-export { ConfidentialAiClient } from "./review/ConfidentialAiClient";
 // verdict
 export { MockVerdictWriter } from "./verdict/MockVerdictWriter";
 export { EnsV2VerdictWriter } from "./verdict/EnsV2VerdictWriter";
