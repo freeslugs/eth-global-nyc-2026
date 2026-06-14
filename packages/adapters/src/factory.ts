@@ -15,7 +15,7 @@ import { MockResolver } from "./resolver/MockResolver";
 import { EnsV2Resolver } from "./resolver/EnsV2Resolver";
 import { MockFetcher } from "./fetch/MockFetcher";
 import { FileFetcher } from "./fetch/FileFetcher";
-import { IpfsFetcher } from "./fetch/IpfsFetcher";
+import { HttpFetcher } from "./fetch/HttpFetcher";
 import { LocalSigner } from "./signer/LocalSigner";
 import { LedgerSigner } from "./signer/LedgerSigner";
 import { MockVerdictWriter } from "./verdict/MockVerdictWriter";
@@ -53,8 +53,8 @@ export function buildAdapters(env: NodeJS.ProcessEnv = process.env): Adapters {
     env.AEGIS_RESOLVER === "ens" ? new EnsV2Resolver() : new MockResolver(store);
 
   const fetcher: SkillFetcher =
-    env.AEGIS_FETCHER === "ipfs"
-      ? new IpfsFetcher()
+    env.AEGIS_FETCHER === "http" || env.AEGIS_FETCHER === "ipfs"
+      ? new HttpFetcher()
       : env.AEGIS_FETCHER === "file"
         ? new FileFetcher()
         : new MockFetcher();

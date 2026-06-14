@@ -8,7 +8,10 @@ export { EnsV2Resolver } from "./resolver/EnsV2Resolver";
 // fetch
 export { MockFetcher } from "./fetch/MockFetcher";
 export { FileFetcher } from "./fetch/FileFetcher";
-export { IpfsFetcher } from "./fetch/IpfsFetcher";
+export { HttpFetcher } from "./fetch/HttpFetcher";
+// discover (on-chain enumeration — shared by the web app and the CLI)
+export { discoverSkills, discoverSkillNames } from "./discover/discoverSkills";
+export type { Discovered, DiscoveredOrg, DiscoverOptions } from "./discover/discoverSkills";
 // signer
 export { LocalSigner } from "./signer/LocalSigner";
 export { LedgerSigner } from "./signer/LedgerSigner";
