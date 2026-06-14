@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getOrgs, type OrgEntry } from "@/lib/registry.server";
+import { EnsName } from "@/components/ens-name";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,7 +43,7 @@ function OrgCard({ org }: { org: OrgEntry }) {
           {org.counts.total} skill{org.counts.total === 1 ? "" : "s"}
         </span>
       </div>
-      <span className="mt-0.5 font-mono text-xs text-[#78716c]">{org.name}</span>
+      <EnsName name={org.name} className="mt-0.5 text-xs text-[#78716c]" />
 
       <div className="mt-3 flex flex-wrap gap-2 text-[12px]">
         {org.counts.verified > 0 && (
@@ -72,9 +73,9 @@ function OrgCard({ org }: { org: OrgEntry }) {
           <li key={record.name}>
             <Link
               href={`/a/${encodeURIComponent(record.pin)}`}
-              className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 font-mono text-[13px] transition-colors hover:bg-[#faf9f7]"
+              className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors hover:bg-[#faf9f7]"
             >
-              <span className="truncate">{record.name.split(".")[0]}</span>
+              <EnsName name={record.name} display={record.name.split(".")[0]} className="min-w-0" />
               <span className="shrink-0 text-xs text-[#a8a29e]">
                 {record.verdict ? `${record.verdict.status} · ${record.verdict.riskScore}` : "—"}
               </span>

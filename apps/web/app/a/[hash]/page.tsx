@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getEntryByPin } from "@/lib/registry.server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, statusVariant } from "@/components/ui/badge";
+import { EnsName } from "@/components/ens-name";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function SkillPage({ params }: { params: Promise<{ hash: st
       </Link>
 
       <div className="flex items-center justify-between gap-3">
-        <h1 className="font-mono text-xl font-semibold">{record.name}</h1>
+        <EnsName name={record.name} className="text-xl font-semibold" />
         <Badge variant={statusVariant(status)}>{status}</Badge>
       </div>
 

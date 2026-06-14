@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Attestation } from "@aegis/core";
 import { getRegistry, type RegistryEntry } from "@/lib/registry.server";
 import { shortHash } from "@/lib/utils";
+import { EnsName } from "@/components/ens-name";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,7 +57,7 @@ function SkillCard({ entry }: { entry: RegistryEntry }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-display text-lg font-semibold">{title}</h2>
-          <div className="mt-0.5 font-mono text-xs text-[#78716c]">{record.name}</div>
+          <EnsName name={record.name} className="mt-0.5 text-xs text-[#78716c]" />
         </div>
         <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[13px] font-medium ${badge.cls}`}>
           {badge.label}

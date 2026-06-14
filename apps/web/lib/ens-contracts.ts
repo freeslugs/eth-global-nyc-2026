@@ -15,6 +15,13 @@ export const PUBLIC_RESOLVER: Address = "0x5239a812ec9a62f46dbb5de8f346c8efe7553
  */
 export const ORG_REGISTRY = (process.env.NEXT_PUBLIC_ORG_REGISTRY ?? "") as Address | "";
 
+/** The company skills are published under, and that company's subregistry. */
+export const COMPANY = process.env.NEXT_PUBLIC_COMPANY ?? "acme";
+export const COMPANY_REGISTRY = (process.env.NEXT_PUBLIC_COMPANY_REGISTRY ?? "") as Address | "";
+
+/** The resolver skills are registered with + their pin is written to. */
+export const ENS_RESOLVER = (process.env.NEXT_PUBLIC_ENS_RESOLVER ?? PUBLIC_RESOLVER) as Address;
+
 /** uint64 max — a non-expiring name (orgs own their subname outright). */
 export const MAX_EXPIRY = (1n << 64n) - 1n;
 
@@ -37,5 +44,20 @@ export const permissionedRegistryAbi = [
       { name: "expiry", type: "uint64" },
     ],
     outputs: [{ name: "tokenId", type: "uint256" }],
+  },
+] as const;
+
+/** PermissionedResolver.setText — write the skill's content pin. */
+export const permissionedResolverAbi = [
+  {
+    name: "setText",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "node", type: "bytes32" },
+      { name: "key", type: "string" },
+      { name: "value", type: "string" },
+    ],
+    outputs: [],
   },
 ] as const;

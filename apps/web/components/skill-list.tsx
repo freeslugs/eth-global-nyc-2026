@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { shortHash } from "@/lib/utils";
+import { EnsName } from "@/components/ens-name";
 import type { RegistryEntry } from "@/lib/registry.server";
 
 const STATUS_STYLE: Record<string, { label: string; cls: string; row: string }> = {
@@ -27,7 +28,7 @@ export function SkillList({ entries }: { entries: RegistryEntry[] }) {
             href={`/a/${encodeURIComponent(record.pin)}`}
             className={`flex items-center gap-4 border-b border-[#f5f4f1] px-6 py-4 transition-colors last:border-0 hover:bg-[#faf9f7] ${status.row}`}
           >
-            <span className="flex-1 font-mono text-sm">{record.name}</span>
+            <EnsName name={record.name} className="flex-1 text-sm" />
             <span className="hidden font-mono text-xs text-[#a8a29e] sm:block">
               {shortHash(record.pin, 6, 4)}
             </span>

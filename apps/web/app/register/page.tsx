@@ -1,15 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { zeroAddress } from "viem";
+import { namehash } from "viem/ens";
 import { ConnectButton } from "@/components/connect-button";
 import {
   ALL_ROLES,
+  COMPANY,
+  COMPANY_REGISTRY,
+  ENS_RESOLVER,
   MAX_EXPIRY,
   ORG_REGISTRY,
   PUBLIC_RESOLVER,
   permissionedRegistryAbi,
+  permissionedResolverAbi,
 } from "@/lib/ens-contracts";
 
 const ROOT = "safeskills.eth";
@@ -138,15 +143,45 @@ function CreateOrg() {
   );
 }
 
+type Step = "idle" | "register" | "pin" | "done";
+
 function SubmitSkill() {
+  const { address } = useAccount();
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
   const [pin, setPin] = useState<string | null>(null);
   const [bytes, setBytes] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>("idle");
+
+  const { writeContract, data: hash, error: txError, reset } = useWriteContract();
+  const { isSuccess: confirmed } = useWaitForTransactionReceipt({ hash });
+  const processed = useRef<string | undefined>(undefined);
 
   const validUrl = /^https?:\/\//i.test(url);
+  const fullName = `${slug(label) || "your-skill"}.${COMPANY}.${ROOT}`;
+  const node = namehash(fullName);
+  const ready = Boolean(slug(label) && pin && address && COMPANY_REGISTRY && ENS_RESOLVER);
+
+  // Two-step publish: register the subname, then (once it confirms) write the pin.
+  // Each tx hash is processed once so the second step can't fire on the first's
+  // lingering "confirmed" state.
+  useEffect(() => {
+    if (!confirmed || !hash || hash === processed.current) return;
+    processed.current = hash;
+    if (step === "register") {
+      setStep("pin");
+      writeContract({
+        address: ENS_RESOLVER,
+        abi: permissionedResolverAbi,
+        functionName: "setText",
+        args: [node as `0x${string}`, "safeskills.pin", pin!],
+      });
+    } else if (step === "pin") {
+      setStep("done");
+    }
+  }, [confirmed, hash, step, node, pin, writeContract]);
 
   async function computePin() {
     setBusy(true);
@@ -169,6 +204,21 @@ function SubmitSkill() {
     }
   }
 
+  function publish() {
+    if (!ready) return;
+    reset();
+    processed.current = undefined;
+    setStep("register");
+    writeContract({
+      address: COMPANY_REGISTRY as `0x${string}`,
+      abi: permissionedRegistryAbi,
+      functionName: "register",
+      args: [slug(label), address!, zeroAddress, ENS_RESOLVER, ALL_ROLES, MAX_EXPIRY],
+    });
+  }
+
+  const pending = step === "register" || step === "pin";
+
   return (
     <section className="space-y-4 rounded-2xl border border-[#e7e5e1] bg-white p-6">
       <div>
@@ -188,6 +238,7 @@ function SubmitSkill() {
           placeholder="weather"
           className="mt-1 w-full rounded-md border border-[#d6d3ce] px-3 py-2 font-mono text-sm outline-none focus:border-ink"
         />
+        <span className="mt-1 block font-mono text-xs text-[#a8a29e]">{fullName}</span>
       </label>
 
       <label className="block">
@@ -220,17 +271,43 @@ function SubmitSkill() {
       )}
       {error && <p className="text-sm text-[#dc2626]">{error}</p>}
 
+      {!COMPANY_REGISTRY && (
+        <p className="rounded-md bg-[#fffaf0] px-3 py-2 text-xs text-[#92710a]">
+          Set <span className="font-mono">NEXT_PUBLIC_COMPANY_REGISTRY</span> (your company&apos;s
+          subregistry) to enable on-chain publishing.
+        </p>
+      )}
+
       <button
-        disabled={!slug(label) || !pin}
-        onClick={() =>
-          alert(
-            `Would register ${slug(label)}.<company>.${ROOT}\n  safeskills.pin = ${pin}\n  source = ${url}\n(signed by your wallet, gas only).`,
-          )
-        }
+        disabled={!ready || pending}
+        onClick={publish}
         className="rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink/90 disabled:opacity-50"
       >
-        Submit skill →
+        {step === "register"
+          ? "Registering name…"
+          : step === "pin"
+            ? "Writing pin…"
+            : "Submit skill →"}
       </button>
+
+      {step === "done" && (
+        <p className="text-sm text-accent">
+          ✓ Published <span className="font-mono">{fullName}</span> ·{" "}
+          <a
+            href={`https://explorer.ens.dev/${fullName}`}
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            view on ENS
+          </a>
+        </p>
+      )}
+      {txError && (
+        <p className="break-words text-sm text-[#dc2626]">
+          {(txError as { shortMessage?: string }).shortMessage ?? txError.message}
+        </p>
+      )}
     </section>
   );
 }
