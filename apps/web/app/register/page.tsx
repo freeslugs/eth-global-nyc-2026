@@ -10,7 +10,15 @@ import {
   useWriteContract,
 } from "wagmi";
 import { sepolia } from "wagmi/chains";
-import { decodeEventLog, encodeFunctionData, type Address, type Hex } from "viem";
+import {
+  concat,
+  encodeAbiParameters,
+  encodeFunctionData,
+  getContractAddress,
+  keccak256,
+  type Address,
+  type Hex,
+} from "viem";
 import { labelhash, namehash } from "viem/ens";
 import { ConnectButton } from "@/components/connect-button";
 import {
@@ -31,27 +39,33 @@ const ROOT = "safeskills.eth";
 const ZERO = "0x0000000000000000000000000000000000000000";
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "");
 
-type Log = { data: Hex; topics: readonly Hex[] };
-
-/** Pull the new proxy address out of a VerifiableFactory.deployProxy receipt. */
-function proxyFrom(logs: readonly Log[]): Address {
-  for (const log of logs) {
-    try {
-      const ev = decodeEventLog({
-        abi: verifiableFactoryAbi,
-        data: log.data,
-        topics: log.topics as [Hex, ...Hex[]],
-      });
-      if (ev.eventName === "ProxyDeployed") return (ev.args as { proxyAddress: Address }).proxyAddress;
-    } catch {
-      /* not our event */
-    }
-  }
-  throw new Error("ProxyDeployed event not found in receipt");
-}
-
 const initData = (owner: Address): Hex =>
   encodeFunctionData({ abi: proxyInitializeAbi, functionName: "initialize", args: [owner, ALL_ROLES] });
+
+// VerifiableFactory's immutable proxy-logic singleton. The deployed proxy address
+// is a pure CREATE2 function of (factory, sender, salt) — NOT the implementation —
+// so we can compute both proxy addresses up front, getCode-check them, and skip
+// whatever's already deployed. Deterministic ⇒ no localStorage, and it recovers a
+// half-finished creation from any browser (even one started before this code).
+const PROXY_LOGIC = "0x917C561a74Df398646e06f3FFAA51DB8e8330C5A" as const;
+
+/** Deterministic salts per company so the proxy addresses are predictable. */
+const registrySalt = (company: string): bigint => BigInt(labelhash(`${company}:registry`));
+const resolverSalt = (company: string): bigint => BigInt(labelhash(`${company}:resolver`));
+
+/** The address VerifiableFactory.deployProxy(_, userSalt, _) will deploy to. */
+function proxyAddress(sender: Address, userSalt: bigint): Address {
+  const outerSalt = keccak256(
+    encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [sender, userSalt]),
+  );
+  const bytecode = concat([
+    "0x3d604d80600a3d3981f3363d3d373d3d3d363d73",
+    PROXY_LOGIC,
+    "0x5af43d82803e903d91602b57fd5bf3",
+    outerSalt,
+  ]);
+  return getContractAddress({ bytecode, from: VERIFIABLE_FACTORY, opcode: "CREATE2", salt: outerSalt });
+}
 
 export default function RegisterPage() {
   const [mounted, setMounted] = useState(false);
@@ -229,8 +243,9 @@ function CompanyPanel({
   onCreated: () => void;
 }) {
   const { address } = useAccount();
+  const client = usePublicClient();
   const { writeContract, data: hash, error, reset } = useWriteContract();
-  const { data: receipt, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { isSuccess } = useWaitForTransactionReceipt({ hash });
   const processed = useRef<string | undefined>(undefined);
   const registryRef = useRef<Address | undefined>(undefined);
   const resolverRef = useRef<Address | undefined>(undefined);
@@ -240,21 +255,20 @@ function CompanyPanel({
   const fullName = `${company || "your-company"}.${ROOT}`;
   const ready = Boolean(company && address && ORG_REGISTRY && !exists);
 
-  // 3-tx flow: deploy the company's subregistry → its resolver → register it.
+  // 3-tx flow: deploy subregistry → resolver → register. The proxy addresses are
+  // pre-computed in create() (deterministic), so each step just advances.
   useEffect(() => {
-    if (!isSuccess || !receipt || hash === processed.current) return;
+    if (!isSuccess || hash === processed.current) return;
     processed.current = hash;
     if (step === "registry") {
-      registryRef.current = proxyFrom(receipt.logs);
       setStep("resolver");
       writeContract({
         address: VERIFIABLE_FACTORY,
         abi: verifiableFactoryAbi,
         functionName: "deployProxy",
-        args: [PERMISSIONED_RESOLVER_IMPL, BigInt(labelhash(`${company}:resolver`)), initData(address!)],
+        args: [PERMISSIONED_RESOLVER_IMPL, resolverSalt(company), initData(address!)],
       });
     } else if (step === "resolver") {
-      resolverRef.current = proxyFrom(receipt.logs);
       setStep("register");
       writeContract({
         address: ORG_REGISTRY as Address,
@@ -266,7 +280,7 @@ function CompanyPanel({
       setStep("done");
       onCreated();
     }
-  }, [isSuccess, receipt, hash, step, company, address, writeContract, onCreated]);
+  }, [isSuccess, hash, step, company, address, writeContract, onCreated]);
 
   async function create() {
     if (!ready) return;
@@ -290,15 +304,44 @@ function CompanyPanel({
 
     reset();
     processed.current = undefined;
-    registryRef.current = undefined;
-    resolverRef.current = undefined;
-    setStep("registry");
-    writeContract({
-      address: VERIFIABLE_FACTORY,
-      abi: verifiableFactoryAbi,
-      functionName: "deployProxy",
-      args: [USER_REGISTRY_IMPL, BigInt(labelhash(`${company}:registry`)), initData(address!)],
-    });
+
+    // Resume deterministically: the proxy addresses are a pure CREATE2 function of
+    // (factory, this wallet, salt). Compute both, check getCode, and run only the
+    // txs that are missing — no storage, recovers a half-finished creation even
+    // from a different browser or one started before this code shipped.
+    const regAddr = proxyAddress(address!, registrySalt(company));
+    const resAddr = proxyAddress(address!, resolverSalt(company));
+    registryRef.current = regAddr;
+    resolverRef.current = resAddr;
+    const isDeployed = async (a: Address) => Boolean(client && (await client.getBytecode({ address: a })));
+    const regDone = await isDeployed(regAddr);
+    const resDone = await isDeployed(resAddr);
+
+    if (regDone && resDone) {
+      setStep("register");
+      writeContract({
+        address: ORG_REGISTRY as Address,
+        abi: permissionedRegistryAbi,
+        functionName: "register",
+        args: [company, address!, regAddr, resAddr, ALL_ROLES, MAX_EXPIRY],
+      });
+    } else if (regDone) {
+      setStep("resolver");
+      writeContract({
+        address: VERIFIABLE_FACTORY,
+        abi: verifiableFactoryAbi,
+        functionName: "deployProxy",
+        args: [PERMISSIONED_RESOLVER_IMPL, resolverSalt(company), initData(address!)],
+      });
+    } else {
+      setStep("registry");
+      writeContract({
+        address: VERIFIABLE_FACTORY,
+        abi: verifiableFactoryAbi,
+        functionName: "deployProxy",
+        args: [USER_REGISTRY_IMPL, registrySalt(company), initData(address!)],
+      });
+    }
   }
 
   const busy = step !== "idle" && step !== "done";
