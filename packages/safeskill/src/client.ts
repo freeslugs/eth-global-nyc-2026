@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { hashSkill, type AuthRequest, type InstallSigner, type SkillFetcher, type SkillRecord, type SkillResolver, type Verdict } from "@aegis/core";
 import { EnsV2Resolver, IpfsFetcher, LedgerSigner, LocalSigner } from "@aegis/adapters";
@@ -26,7 +26,18 @@ export interface OnboardOptions {
   requireVerdict?: boolean;
 }
 
-export interface UseOptions {
+/** What `check()` accepts. */
+export interface CheckOptions {
+  /**
+   * Re-hash this local SKILL.md file against the ENS pin instead of fetching via
+   * the record's contentUri. This is how the agent gates the *candidate* bytes it
+   * actually holds — and the only way to gate in `--ens` mode, where ENS pins a
+   * hash but stores no content location.
+   */
+  file?: string;
+}
+
+export interface UseOptions extends CheckOptions {
   /** Directory to write installed skills into. Default ".skills". */
   dir?: string;
   /**
@@ -34,6 +45,11 @@ export interface UseOptions {
    * such skills are rejected (not installed). Default true.
    */
   allowOverride?: boolean;
+  /**
+   * Install into Claude Code's layout: `<dir>/<short-name>/SKILL.md` (a folder
+   * per skill), so the agent auto-discovers it. Default false (flat `<name>.md`).
+   */
+  claude?: boolean;
 }
 
 /** Resolve the OnboardOptions into a concrete policy (precedence: policy > preset > threshold > default). */
@@ -135,16 +151,29 @@ export class Safeskill {
    * locally, and decide per policy: auto-approve / needs-override / blocked.
    * No install, no signature — this is the read an agent does *before* loading.
    */
-  async check(name: string): Promise<SkillDecision> {
+  async check(name: string, opts: CheckOptions = {}): Promise<SkillDecision> {
+    return (await this.resolveAndGate(name, opts.file)).decision;
+  }
+
+  /**
+   * Resolve the name, load the candidate bytes (from `file` or the record's
+   * contentUri), re-hash, and run the policy. Returns the decision *and* the
+   * exact bytes that were gated — so `use()` installs precisely what it checked.
+   */
+  private async resolveAndGate(
+    name: string,
+    file?: string,
+  ): Promise<{ decision: SkillDecision; record: SkillRecord; bytes: Uint8Array }> {
     const record = await this.resolver.resolve(name);
-    const bytes = await this.fetch(record);
+    const bytes = await this.loadBytes(record, file);
     const fetchedHash = hashSkill(bytes);
-    return decide({
+    const decision = decide({
       record,
       fetchedHash,
       revoked: revokedFor(this.config.resolver, name),
       policy: this.config.policy,
     });
+    return { decision, record, bytes };
   }
 
   /**
@@ -157,7 +186,7 @@ export class Safeskill {
   async use(name: string, opts: UseOptions = {}): Promise<UseResult> {
     const dir = opts.dir ?? ".skills";
     const allowOverride = opts.allowOverride ?? true;
-    const decision = await this.check(name);
+    const { decision, record, bytes } = await this.resolveAndGate(name, opts.file);
 
     // Hard block — a signature cannot save this.
     if (decision.decision === "blocked") {
@@ -174,7 +203,7 @@ export class Safeskill {
       }
       let authorized: boolean;
       try {
-        authorized = await this.authorizeOverride(decision.record);
+        authorized = await this.authorizeOverride(record);
       } catch (err) {
         // Device error, user rejection on the Ledger, transport failure, etc.
         // → treat as NOT authorized. Nothing is installed.
@@ -184,12 +213,12 @@ export class Safeskill {
       if (authorized !== true) {
         return { decision, installed: false, overridden: false, error: "override signature did not verify" };
       }
-      const path = await this.install(decision.record, dir);
+      const path = await this.write(record, bytes, dir, opts.claude);
       return { decision, installed: true, overridden: true, path };
     }
 
     // auto-approve
-    const path = await this.install(decision.record, dir);
+    const path = await this.write(record, bytes, dir, opts.claude);
     return { decision, installed: true, overridden: false, path };
   }
 
@@ -205,6 +234,12 @@ export class Safeskill {
     const uri = record.contentUri;
     if (!uri) throw new Error(`no contentUri for ${record.name}`);
     return this.fetcher.fetch(uri);
+  }
+
+  /** Candidate bytes to gate: a local file if given, else the record's contentUri. */
+  private async loadBytes(record: SkillRecord, file?: string): Promise<Uint8Array> {
+    if (file) return new Uint8Array(await readFile(file));
+    return this.fetch(record);
   }
 
   /** Build the message the human signs to authorize an override. */
@@ -223,8 +258,21 @@ export class Safeskill {
     return this.signer.verify(req, sig, addr) === true;
   }
 
-  private async install(record: SkillRecord, dir: string): Promise<string> {
-    const bytes = await this.fetch(record);
+  /**
+   * Write the gated bytes to disk. `claude` mode uses Claude Code's layout —
+   * `<dir>/<short-name>/SKILL.md` (a folder per skill) — so the agent discovers
+   * it; otherwise a flat `<dir>/<full-name>.md`. The bytes written are exactly
+   * the bytes that were re-hashed and gated.
+   */
+  private async write(record: SkillRecord, bytes: Uint8Array, dir: string, claude?: boolean): Promise<string> {
+    if (claude) {
+      const short = record.name.split(".")[0] || record.name;
+      const skillDir = join(dir, short);
+      await mkdir(skillDir, { recursive: true });
+      const out = join(skillDir, "SKILL.md");
+      await writeFile(out, bytes);
+      return out;
+    }
     await mkdir(dir, { recursive: true });
     const out = join(dir, `${record.name}.md`);
     await writeFile(out, bytes);

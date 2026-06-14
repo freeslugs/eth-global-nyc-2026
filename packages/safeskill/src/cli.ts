@@ -1,3 +1,5 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { Command } from "commander";
 import pc from "picocolors";
 import { Safeskill } from "./client";
@@ -192,10 +194,11 @@ program
   .command("check")
   .description("Resolve a skill against ENS, re-hash it, and report the decision (no install).")
   .argument("<name>", "skill name (e.g. weather.acme.safeskills.eth)")
-  .action(async (name: string) => {
+  .option("-f, --file <path>", "re-hash this local SKILL.md against the ENS pin (required in --ens mode)")
+  .action(async (name: string, opts: { file?: string }) => {
     const ss = await loadOrExit();
     try {
-      const d = await ss.check(name);
+      const d = await ss.check(name, { file: opts.file });
       printDecision(d);
       process.exit(d.decision === "blocked" ? 1 : 0);
     } catch (err) {
@@ -209,18 +212,22 @@ program
   .description("Check a skill, then install it — auto-approving or requiring a Ledger override per policy.")
   .argument("<name>", "skill name")
   .option("-d, --dir <dir>", "install dir", ".skills")
+  .option("-f, --file <path>", "re-hash this local SKILL.md against the ENS pin (required in --ens mode)")
+  .option("--claude", "install into ~/.claude/skills/<name>/SKILL.md so Claude Code discovers it")
   .option("--no-override", "reject (don't even offer the Ledger override) for below-policy skills")
-  .action(async (name: string, opts: { dir: string; override: boolean }) => {
+  .action(async (name: string, opts: { dir: string; file?: string; claude?: boolean; override: boolean }) => {
     const ss = await loadOrExit();
     try {
-      const d = await ss.check(name);
+      const d = await ss.check(name, { file: opts.file });
       printDecision(d);
 
       if (d.decision === "needs-override" && opts.override && ss.config.signer !== "none") {
         console.log(pc.yellow(`\n  ⚠ below policy — authorizing override with ${ss.config.signer} signer…`));
       }
 
-      const result = await ss.use(name, { dir: opts.dir, allowOverride: opts.override });
+      // In --claude mode, default the install dir to the user's Claude Code skills folder.
+      const dir = opts.claude && opts.dir === ".skills" ? join(homedir(), ".claude", "skills") : opts.dir;
+      const result = await ss.use(name, { dir, file: opts.file, claude: opts.claude, allowOverride: opts.override });
       if (result.installed) {
         const how = result.overridden ? pc.yellow("(Ledger override)") : pc.green("(auto-approved)");
         console.log(pc.green(`\n  ✓ installed → ${result.path} `) + how);

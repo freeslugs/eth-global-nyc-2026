@@ -1,6 +1,6 @@
 // The safeskill SDK — what an agent imports.
 export { Safeskill } from "./client";
-export type { OnboardOptions, UseOptions } from "./client";
+export type { OnboardOptions, UseOptions, CheckOptions } from "./client";
 export { decide } from "./decide";
 export { assess, evaluatePolicy, ruleMatches, thresholdPolicy, validatePolicy, PRESETS } from "./policy";
 export type { PolicyOutcome } from "./policy";
