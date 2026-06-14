@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { Attestation } from "@aegis/core";
 import { getRegistry, type RegistryEntry } from "@/lib/registry.server";
-import { shortHash } from "@/lib/utils";
 import { EnsName } from "@/components/ens-name";
 
 export const runtime = "nodejs";
@@ -36,47 +35,54 @@ export default async function RegistryPage() {
       </header>
 
       <div className="space-y-4">
-        {entries.map((entry) => (
-          <SkillCard key={entry.record.name} entry={entry} />
+        {entries.map((entry, i) => (
+          <SkillCard key={entry.record.name} entry={entry} i={i} />
         ))}
       </div>
     </div>
   );
 }
 
-function SkillCard({ entry }: { entry: RegistryEntry }) {
+// Soft pastel palette — each card rotates through these.
+const CARD_TINTS = [
+  { bg: "bg-[#eafaf2]", border: "border-[#c3ecd7]", hoverBorder: "hover:border-[#a9e3c5]", hoverBg: "hover:bg-[#e0f6ea]" }, // mint green
+  { bg: "bg-[#fdeef4]", border: "border-[#f6cfdf]", hoverBorder: "hover:border-[#f0bad1]", hoverBg: "hover:bg-[#fbe4ee]" }, // light pink
+  { bg: "bg-[#eaf3fd]", border: "border-[#c5dcf5]", hoverBorder: "hover:border-[#aacef0]", hoverBg: "hover:bg-[#e0ecfb]" }, // light blue
+  { bg: "bg-[#fff6e6]", border: "border-[#f6e3bd]", hoverBorder: "hover:border-[#f0d8a3]", hoverBg: "hover:bg-[#fdefd6]" }, // light amber
+  { bg: "bg-[#f2edfc]", border: "border-[#d9cdf3]", hoverBorder: "hover:border-[#cabaee]", hoverBg: "hover:bg-[#eae1fa]" }, // light lavender
+  { bg: "bg-[#e7f8f8]", border: "border-[#bfe9e9]", hoverBorder: "hover:border-[#a5e0e0]", hoverBg: "hover:bg-[#dbf3f3]" }, // light teal
+];
+
+function SkillCard({ entry, i }: { entry: RegistryEntry; i: number }) {
   const { record, title, description, status } = entry;
   const badge = STATUS[status] ?? { label: status, cls: "bg-[#faf9f7] text-[#78716c]" };
+  const tint = CARD_TINTS[i % CARD_TINTS.length]!;
   const attestations = record.attestations ?? [];
 
   return (
     <Link
       href={`/a/${encodeURIComponent(record.pin)}`}
-      className="block rounded-2xl border border-[#e7e5e1] bg-white p-6 transition-colors hover:border-[#d6d3ce] hover:bg-[#fcfbfa]"
+      className={`block border p-5 transition-colors ${tint.bg} ${tint.border} ${tint.hoverBorder} ${tint.hoverBg}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-display text-lg font-semibold">{title}</h2>
+          <h2 className="text-lg font-semibold tracking-[-0.01em]">{title}</h2>
           <EnsName name={record.name} className="mt-0.5 text-xs text-[#78716c]" />
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[13px] font-medium ${badge.cls}`}>
+        <span className={`shrink-0 rounded-none px-2.5 py-0.5 text-[13px] font-medium ${badge.cls}`}>
           {badge.label}
         </span>
       </div>
 
-      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#57534e]">{description}</p>
+      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#57534e] line-clamp-1">{description}</p>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="text-xs uppercase tracking-wide text-[#a8a29e]">Attestations</span>
         {attestations.length === 0 ? (
           <span className="text-sm text-[#a8a29e]">Awaiting review</span>
         ) : (
           attestations.map((a) => <ProviderScore key={a.provider} a={a} />)
         )}
-      </div>
-
-      <div className="mt-4 border-t border-[#f5f4f1] pt-3 font-mono text-[11px] text-[#a8a29e]">
-        pin {shortHash(record.pin, 8, 6)} · owner {record.owner.slice(0, 6)}…{record.owner.slice(-4)}
       </div>
     </Link>
   );
@@ -86,8 +92,8 @@ function ProviderScore({ a }: { a: Attestation }) {
   const pass = a.status === "pass";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
-        pass ? "border-emerald-500/30 bg-emerald-500/5" : "border-red-500/30 bg-red-500/5"
+      className={`inline-flex items-center gap-1.5 border px-2.5 py-1 text-xs ${
+        pass ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/30 bg-red-500/10"
       }`}
       title={`${a.provider}: ${a.status} (${a.score}/100)`}
     >

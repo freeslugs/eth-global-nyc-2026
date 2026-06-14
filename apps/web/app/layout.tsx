@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Space_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { MobileMenu } from "@/components/mobile-menu";
@@ -12,7 +12,7 @@ const display = Space_Grotesk({
   weight: ["400", "500", "600", "700"],
   variable: "--font-display",
 });
-const sans = IBM_Plex_Sans({
+const sans = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-sans",
