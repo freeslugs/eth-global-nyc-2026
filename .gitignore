@@ -27,3 +27,6 @@ packages/contracts/broadcast/
 *.log
 npm-debug.log*
 .vercel
+
+# firecrawl scratch output
+.firecrawl/
