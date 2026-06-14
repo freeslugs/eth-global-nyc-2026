@@ -396,7 +396,9 @@ function writeAttestation(
     .writeReport(runtime, {
       receiver: runtime.config.attestationsAddress,
       report,
-      gasConfig: { gasLimit: "300000" },
+      // onReport appends history AND writes a safeskills.attestation.chainlink.eth
+      // text record on the resolver (an extra text read + setText), so leave headroom.
+      gasConfig: { gasLimit: "600000" },
     })
     .result();
 
