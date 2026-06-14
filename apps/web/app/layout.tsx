@@ -5,8 +5,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { MobileMenu } from "@/components/mobile-menu";
 import { ConnectButton } from "@/components/connect-button";
-import { AppMenu } from "@/components/app-menu";
-import { NAV_LINKS } from "@/lib/nav";
+import { DesktopNav } from "@/components/desktop-nav";
 
 const display = Space_Grotesk({
   subsets: ["latin"],
@@ -40,27 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/" className="font-display text-xl font-bold tracking-tight">
                 ◇ Aegis
               </Link>
-              <nav className="ml-4 hidden flex-1 items-center justify-center gap-7 text-sm text-[#78716c] md:flex">
-                {NAV_LINKS.map((l) =>
-                  l.external ? (
-                    <a
-                      key={l.href}
-                      href={l.href}
-                      className="hover:text-ink"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {l.label}
-                    </a>
-                  ) : (
-                    <Link key={l.href} href={l.href} className="hover:text-ink">
-                      {l.label}
-                    </Link>
-                  ),
-                )}
-                <span className="h-4 w-px bg-[#e7e5e1]" aria-hidden />
-                <AppMenu />
-              </nav>
+              <DesktopNav />
               <div className="ml-auto flex items-center gap-2 md:ml-0">
                 <Link
                   href="/register"

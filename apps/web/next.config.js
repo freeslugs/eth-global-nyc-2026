@@ -28,6 +28,22 @@ const nextConfig = {
         config.resolve.alias[pkg] = resolve(root, "node_modules", pkg);
       }
     }
+    // Optional peer deps that wallet connectors (@metamask/sdk, walletconnect's
+    // pino) reference for React Native / pretty-logging but that we don't ship.
+    // Without this, Next emits noisy "Module not found" warnings for them.
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      "@react-native-async-storage/async-storage": false,
+      "pino-pretty": false,
+    };
+    // viem's Tempo chain config pulls in ox's `tempo` module, which uses a
+    // dynamic require expression webpack can't statically analyze. It's not a
+    // real problem for us (we don't use Tempo), so suppress the noisy warning.
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings ?? []),
+      { module: /ox\/_esm\/tempo\// },
+      { message: /Critical dependency: the request of a dependency is an expression/ },
+    ];
     return config;
   },
 };

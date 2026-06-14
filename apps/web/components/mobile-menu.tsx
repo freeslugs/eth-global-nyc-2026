@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
-import { NAV_LINKS, APP_NAV } from "@/lib/nav";
+import { NAV_LINKS, APP_NAV, isActiveLink } from "@/lib/nav";
 
 export function MobileMenu() {
   const [open, setOpen] = React.useState(false);
+  const pathname = usePathname();
   const close = () => setOpen(false);
 
   return (
@@ -49,7 +51,10 @@ export function MobileMenu() {
                     key={l.href}
                     href={l.href}
                     onClick={close}
-                    className="border-b border-[#f5f4f1] py-3 text-[15px] text-[#57534e] hover:text-ink"
+                    aria-current={isActiveLink(pathname, l) ? "page" : undefined}
+                    className={`border-b border-[#f5f4f1] py-3 text-[15px] hover:text-ink ${
+                      isActiveLink(pathname, l) ? "font-medium text-ink" : "text-[#57534e]"
+                    }`}
                   >
                     {l.label}
                   </Link>
@@ -64,7 +69,10 @@ export function MobileMenu() {
                   key={l.href}
                   href={l.href}
                   onClick={close}
-                  className="border-b border-[#f5f4f1] py-3 text-[15px] text-[#57534e] last:border-0 hover:text-ink"
+                  aria-current={isActiveLink(pathname, l) ? "page" : undefined}
+                  className={`border-b border-[#f5f4f1] py-3 text-[15px] last:border-0 hover:text-ink ${
+                    isActiveLink(pathname, l) ? "font-medium text-ink" : "text-[#57534e]"
+                  }`}
                 >
                   {l.label}
                 </Link>

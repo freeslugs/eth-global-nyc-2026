@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
-import { APP_NAV } from "@/lib/nav";
+import { APP_NAV, isActiveLink } from "@/lib/nav";
 
 /** Desktop "App" dropdown — groups the product pages behind one nav item. */
 export function AppMenu() {
@@ -27,7 +27,7 @@ export function AppMenu() {
     };
   }, [open]);
 
-  const active = APP_NAV.items.some((i) => pathname.startsWith(i.href));
+  const active = APP_NAV.items.some((i) => isActiveLink(pathname, i));
 
   return (
     <div ref={ref} className="relative">
@@ -57,8 +57,9 @@ export function AppMenu() {
               href={i.href}
               role="menuitem"
               onClick={() => setOpen(false)}
+              aria-current={isActiveLink(pathname, i) ? "page" : undefined}
               className={`block px-4 py-2.5 text-sm transition-colors hover:bg-[#faf9f7] ${
-                pathname.startsWith(i.href) ? "text-ink" : "text-[#57534e]"
+                isActiveLink(pathname, i) ? "font-medium text-ink" : "text-[#57534e]"
               }`}
             >
               {i.label}

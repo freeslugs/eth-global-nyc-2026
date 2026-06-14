@@ -27,3 +27,11 @@ export const APP_NAV: NavGroup = {
     { href: "/register", label: "Submit a skill" },
   ],
 };
+
+// Whether a nav link points at the currently-active page. External links are
+// never "active"; "/" must match exactly so it doesn't light up everywhere.
+export function isActiveLink(pathname: string, link: Pick<NavLink, "href" | "external">): boolean {
+  if (link.external) return false;
+  if (link.href === "/") return pathname === "/";
+  return pathname === link.href || pathname.startsWith(`${link.href}/`);
+}
