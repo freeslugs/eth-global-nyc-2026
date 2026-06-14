@@ -342,7 +342,11 @@ program
     // TODO(contenturi): bake the temporary demo content dir into the gate command so
     // check/use resolve a candidate without --file until contentUri is pinned on-chain.
     const demoContent = join(dirname(cliPath), "..", "demo-content");
-    const gate = `AEGIS_CONTENT_DIR='${demoContent}' node '${cliPath}'`;
+    // Public, keyless Sepolia RPC baked in so the gate resolves ENS with zero env
+    // setup in any session. Safe to hardcode — it's a public read endpoint, no API
+    // key. (Don't ever bake a keyed RPC like Alchemy/Infura here.)
+    const rpc = process.env.AEGIS_RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com";
+    const gate = `AEGIS_RPC_URL='${rpc}' AEGIS_CONTENT_DIR='${demoContent}' node '${cliPath}'`;
     const content = metaSkill(gate);
 
     if (opts.print) {
