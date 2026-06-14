@@ -8,6 +8,7 @@ dist/
 out/
 coverage/
 *.tsbuildinfo
+*.tgz
 
 # turbo
 .turbo/
@@ -27,6 +28,9 @@ packages/contracts/broadcast/
 *.log
 npm-debug.log*
 .vercel
+
+# safeskill default install dir (runtime artifact from `use` without --claude)
+.skills/
 
 # firecrawl scratch output
 .firecrawl/

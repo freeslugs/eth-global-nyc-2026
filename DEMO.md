@@ -37,6 +37,8 @@ node packages/safeskill/dist/cli.js init
 
 # onboard — OPTIONAL: Claude can do this for you conversationally (see "Onboarding"
 # below). To set it yourself instead:
+#   --local  : a software dev key signs overrides (no device; demo-friendly)
+#   --ledger : a hardware Ledger clear-signs every override (see "Hardware Ledger" below)
 node packages/safeskill/dist/cli.js onboard --ens --local --min-security 70
 
 # clean slate — make sure no demo skill is lingering from a previous run
@@ -51,13 +53,28 @@ rm -rf ~/.claude/skills/weather
 
 > **`npx` flavor (optional).** `npm pack` in `packages/safeskill` produces a
 > self-contained `aegis-safeskill-0.0.0.tgz`; then `npx ./aegis-safeskill-0.0.0.tgz init`
-> works with no global install (it pulls only `commander`/`picocolors`/`viem`; the
-> `@aegis/*` code is bundled in). Run `init` from a **persistent** install (the repo
-> build), not an ephemeral npx temp dir, so the gate path the meta-skill writes stays valid.
+> works with no global install. The `@aegis/*` + `@noble/*` code is bundled in; npm
+> pulls the real deps (`commander`/`picocolors`/`viem`, plus the `@ledgerhq/*` +
+> `node-hid`/`usb` transport for `--ledger`, which need native build tools). Run `init`
+> from a **persistent** install (the repo build), not an ephemeral npx temp dir, so the
+> gate path the meta-skill writes stays valid.
 
 > **Two demo modes.** *Manual:* you tell Claude the exact `safeskill use …` command.
 > *Natural (better):* after setup, you just say "install the weather skill" and Claude
 > reaches for the gate itself via the `safeskills` meta-skill.
+
+> **Hardware Ledger (real signature on a Flex/Stax/Nano).** Onboard with `--ledger`
+> instead of `--local`. The device must be **connected, unlocked, with the Ethereum
+> app open** at two moments: at `onboard` (silent — it reads the address, no button)
+> and at the legitimate-skill install in Beat B (the device **clear-signs** the
+> EIP-712 `AuthRequest` — you press **Approve** on the device). A confirmed setup shows
+> `signer ledger (0x…)` with your device's address, not the `0xf39f…2266` local key.
+> Gotchas we hit: (1) **restart the Claude session** after `init` so it loads the new
+> meta-skill — otherwise the agent re-onboards with the old `--local` default; (2) if
+> the device is disconnected mid-flow you get `0x6985` (declined) — reconnect and press
+> Approve; (3) run `use …` as a **single line** (a trailing `\` or `sudo` breaks the
+> argument / file read). To let Claude pick the signer for you, it now asks
+> *"Ledger or local?"* during conversational onboarding.
 
 > The `safeskill` CLI does **not** auto-load `.env`, so always invoke it with
 > `node --env-file=.env …` (or `export AEGIS_RPC_URL=…` first). Without the RPC

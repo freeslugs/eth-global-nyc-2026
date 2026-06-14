@@ -268,19 +268,26 @@ Gate command: \`${gate}\`
 Run \`${gate} status\`. If it reports the user has NOT onboarded, set them up
 **conversationally** — ask, don't guess — then run \`onboard\`:
 
-1. "What security score (0–100, higher = safer) should let a skill install with no
+1. "Authorize overrides with a hardware **Ledger**, or a **local** dev key?"
+   → \`--ledger\` (the device clear-signs every override) or \`--local\` (a burner
+   key signs in software; demo only, no device). Use the choice as \`<signer>\`
+   below. If the user picked Ledger, tell them to connect + unlock the device and
+   open the Ethereum app BEFORE onboarding (so it can read the address).
+2. "What security score (0–100, higher = safer) should let a skill install with no
    questions asked?" → \`--min-security <N>\` (a sensible default is 70).
-2. "For reviewed skills below that line — require your signature, or block them?"
+3. "For reviewed skills below that line — require your signature, or block them?"
    (sign ⇒ they stay \`needs-override\`; block ⇒ add a stricter rule).
-3. "Any publishers to ALWAYS trust or ALWAYS block?" (e.g. \`acme.safeskills.eth\`).
+4. "Any publishers to ALWAYS trust or ALWAYS block?" (e.g. \`acme.safeskills.eth\`).
 
-Then onboard with the answer that fits:
-- Simple threshold → \`${gate} onboard --ens --local --min-security <N>\`
-- A named preset → \`${gate} onboard --ens --local --preset strict|default|permissive\`
+Then onboard with the answer that fits (\`<signer>\` = \`--ledger\` or \`--local\`):
+- Simple threshold → \`${gate} onboard --ens <signer> --min-security <N>\`
+- A named preset → \`${gate} onboard --ens <signer> --preset strict|default|permissive\`
 - Custom rules (trusted/blocked publishers, etc.) → write a policy JSON (schema
-  below) to a file, then \`${gate} onboard --ens --local --policy <file>\`.
+  below) to a file, then \`${gate} onboard --ens <signer> --policy <file>\`.
 
-Confirm with \`${gate} policy\` and show the user their active rules.
+Confirm with \`${gate} policy\` and show the user their active rules. If they chose
+Ledger, remind them the device must be connected with the Ethereum app open again
+at install time, so it can clear-sign the override.
 
 ### Policy schema (for \`--policy <file>\`)
 An ordered ruleset: rules are tried top-to-bottom, **first match wins**; if none
