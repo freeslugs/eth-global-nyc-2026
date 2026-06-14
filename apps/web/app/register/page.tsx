@@ -576,7 +576,7 @@ function SubmitSkill({
               <div className="text-[#78716c]">parsed metadata → safeskills.metadata</div>
               {Object.entries(metadata).map(([k, v]) => (
                 <div key={k} className="break-words">
-                  <span className="text-[#a8a29e]">{k}:</span>{" "}
+                  <span className="font-semibold text-[#a8a29e]">{k}:</span>{" "}
                   <span className="text-[#57534e]">{Array.isArray(v) ? v.join(", ") : v}</span>
                 </div>
               ))}
