@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   useAccount,
   useReadContract,
@@ -148,6 +149,39 @@ function RegisterBody() {
 
 type OrgStep = "idle" | "registry" | "resolver" | "register" | "done";
 
+/**
+ * The companies this wallet already owns, derived from the registry: a skill
+ * `weather.acme.safeskills.eth` it owns means it owns the company `acme.…`.
+ * `null` while loading so we don't flash the claim form to existing owners.
+ */
+function useOwnedCompanies(address?: string) {
+  const [companies, setCompanies] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (!address) {
+      setCompanies(null);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/registry")
+      .then((r) => r.json())
+      .then((data: { skills?: { name: string; owner: string }[] }) => {
+        if (cancelled) return;
+        const mine = new Set<string>();
+        for (const s of data.skills ?? []) {
+          if (s.owner?.toLowerCase() !== address.toLowerCase()) continue;
+          const labels = s.name.split(".");
+          mine.add(labels.length > 2 ? labels.slice(1).join(".") : s.name);
+        }
+        setCompanies([...mine].sort());
+      })
+      .catch(() => setCompanies([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [address]);
+  return companies;
+}
+
 function CompanyPanel({
   label,
   setLabel,
@@ -162,6 +196,7 @@ function CompanyPanel({
   onCreated: () => void;
 }) {
   const { address } = useAccount();
+  const owned = useOwnedCompanies(address);
   const { writeContract, data: hash, error, reset } = useWriteContract();
   const { data: receipt, isSuccess } = useWaitForTransactionReceipt({ hash });
   const processed = useRef<string | undefined>(undefined);
@@ -224,6 +259,43 @@ function CompanyPanel({
         : step === "register"
           ? "Registering company…"
           : "Create company →";
+
+  // Still checking the registry — hold the slot so owners never see the form flash.
+  // (Skip while a creation is in flight so the tx progress button stays visible.)
+  if (owned === null && step === "idle") {
+    return <div className="h-40 animate-pulse rounded-2xl border border-[#e7e5e1] bg-white" />;
+  }
+
+  // This wallet already has a company name — show it instead of the claim form.
+  if (owned && owned.length > 0 && step === "idle") {
+    return (
+      <section className="space-y-3 rounded-2xl border border-[#e7e5e1] bg-white p-6">
+        <div>
+          <h2 className="font-display text-xl font-semibold">
+            1 · Your compan{owned.length === 1 ? "y" : "ies"}
+          </h2>
+          <p className="mt-1 text-sm text-[#78716c]">
+            This wallet already owns {owned.length === 1 ? "a company name" : `${owned.length} company names`}{" "}
+            on <span className="font-mono">{ROOT}</span>.
+          </p>
+        </div>
+        <ul className="space-y-2">
+          {owned.map((companyName) => (
+            <li
+              key={companyName}
+              className="flex items-center justify-between gap-3 rounded-md bg-[#faf9f7] px-3 py-2"
+            >
+              <span className="font-mono text-sm">{companyName}</span>
+              <Link href="/orgs" className="shrink-0 text-xs text-accent underline">
+                view
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs text-[#a8a29e]">Publish a skill under it below.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-4 rounded-2xl border border-[#e7e5e1] bg-white p-6">
