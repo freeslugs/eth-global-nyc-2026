@@ -36,16 +36,27 @@ function deriveStatus(record: SkillRecord): SkillStatus {
   return "pending";
 }
 
-/** A registry entry for a skill discovered on-chain (no seed metadata to draw on). */
+/** First string from a metadata field that may be a string or string[]. */
+function metaText(v: string | string[] | undefined): string | undefined {
+  if (Array.isArray(v)) return v.join(", ");
+  return v || undefined;
+}
+
+/**
+ * A registry entry for a skill discovered on-chain. Prefers the skill's own
+ * on-chain metadata (parsed SKILL.md frontmatter) for title/description, falling
+ * back to a prettified label + org when a record predates metadata.
+ */
 function entryFromRecord(record: SkillRecord): RegistryEntry {
   const [skill, ...rest] = record.name.split(".");
   const org = rest.length > 1 ? rest.slice(0, -1).join(".") : rest.join(".");
   return {
     record,
-    title: prettyLabel(skill ?? record.name),
-    description: org ? `Published under ${org}` : "On-chain skill",
+    title: metaText(record.metadata?.name) ?? prettyLabel(skill ?? record.name),
+    description:
+      metaText(record.metadata?.description) ?? (org ? `Published under ${org}` : "On-chain skill"),
     status: deriveStatus(record),
-    fetchUri: "",
+    fetchUri: record.contentUri ?? "",
   };
 }
 

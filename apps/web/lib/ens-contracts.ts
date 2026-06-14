@@ -75,7 +75,11 @@ export const permissionedRegistryAbi = [
 export const companyTokenId = (label: string): bigint =>
   BigInt(labelhash(label)) & ~0xffffffffn;
 
-/** PermissionedResolver.setText — write the skill's content pin. */
+/**
+ * PermissionedResolver — write the skill's records. `setText` writes one record;
+ * `multicall` batches several `setText` calls into a single transaction (so pin +
+ * uri + metadata are one wallet confirmation, not three).
+ */
 export const permissionedResolverAbi = [
   {
     name: "setText",
@@ -87,6 +91,13 @@ export const permissionedResolverAbi = [
       { name: "value", type: "string" },
     ],
     outputs: [],
+  },
+  {
+    name: "multicall",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "data", type: "bytes[]" }],
+    outputs: [{ name: "results", type: "bytes[]" }],
   },
 ] as const;
 

@@ -26,10 +26,34 @@ export interface SkillRecord {
    * others (e.g. an internal `my-local-verifier.eth`). Empty until reviewed.
    */
   attestations?: Attestation[];
-  /** Resolved from contenthash (public skills only). */
+  /**
+   * safeskills.uri — where to fetch the SKILL.md. A consuming agent downloads
+   * this, re-hashes it, and checks it against `pin` before trusting the skill.
+   */
   contentUri?: string;
+  /** safeskills.metadata — parsed SKILL.md frontmatter (name, description, allowed-tools…). */
+  metadata?: SkillMetadata;
   /** ENS name owner (the org). */
   owner: Hex;
+}
+
+/**
+ * Parsed SKILL.md frontmatter, mirrored on-chain so the catalog (and consuming
+ * agents) can read what a skill is without downloading it. Common fields are
+ * named; anything else the frontmatter carries is preserved via the index.
+ */
+export interface SkillMetadata {
+  /** The skill's declared name. */
+  name?: string;
+  /** One-line description of what the skill does. */
+  description?: string;
+  /** SPDX license id, e.g. "MIT". */
+  license?: string;
+  /** Version string, if the skill declares one. */
+  version?: string;
+  /** Tools the skill is permitted to use — security-relevant capability surface. */
+  "allowed-tools"?: string | string[];
+  [key: string]: string | string[] | undefined;
 }
 
 /** The review verdict produced by the LLM inside the Chainlink TEE. */

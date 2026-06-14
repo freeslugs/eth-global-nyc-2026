@@ -1,4 +1,4 @@
-import type { Attestation, Verdict } from "@aegis/core";
+import type { Attestation, SkillMetadata, Verdict } from "@aegis/core";
 
 /**
  * The ENS text-record keys Aegis pins onto a skill name, and the
@@ -6,13 +6,37 @@ import type { Attestation, Verdict } from "@aegis/core";
  * (write) so the wire format has exactly one definition.
  *
  *   safeskills.pin                       -> "sha256:<hex>"   the content hash (org writes)
+ *   safeskills.uri                       -> "https://…"      where to fetch the SKILL.md (org writes)
+ *   safeskills.metadata                  -> Metadata JSON    parsed SKILL.md frontmatter (org writes)
  *   safeskills.attestation.<provider>    -> Attestation JSON (that provider writes)
  *   safeskills.verdict                   -> Verdict JSON     (legacy single-verdict)
  */
 export const TEXT_KEYS = {
   pin: "safeskills.pin",
+  uri: "safeskills.uri",
+  metadata: "safeskills.metadata",
   verdict: "safeskills.verdict",
 } as const;
+
+/** Serialize parsed SKILL.md frontmatter for the `safeskills.metadata` record. */
+export function encodeMetadata(m: SkillMetadata): string {
+  return JSON.stringify(m);
+}
+
+/**
+ * Parse the `safeskills.metadata` record. Returns undefined when absent. Tolerant
+ * by design — metadata is descriptive, not load-bearing like the pin/verdict — so
+ * a malformed blob yields undefined rather than throwing.
+ */
+export function parseMetadata(raw: string | null | undefined): SkillMetadata | undefined {
+  if (raw == null || raw === "") return undefined;
+  try {
+    const obj = JSON.parse(raw) as unknown;
+    return obj && typeof obj === "object" ? (obj as SkillMetadata) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** The per-provider attestation record key, e.g. "safeskills.attestation.chainlink.eth". */
 export const ATTESTATION_PREFIX = "safeskills.attestation.";

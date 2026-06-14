@@ -409,7 +409,10 @@ function CompanyPanel({
   );
 }
 
-type SkillStep = "idle" | "register" | "pin" | "done";
+type SkillStep = "idle" | "register" | "records" | "done";
+
+/** Parsed SKILL.md frontmatter returned by /api/pin. */
+type SkillMeta = Record<string, string | string[]>;
 
 function SubmitSkill({
   company,
@@ -427,6 +430,8 @@ function SubmitSkill({
   const [url, setUrl] = useState("");
   const [pin, setPin] = useState<string | null>(null);
   const [bytes, setBytes] = useState<number | null>(null);
+  const [skillUri, setSkillUri] = useState<string | null>(null);
+  const [metadata, setMetadata] = useState<SkillMeta | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<SkillStep>("idle");
@@ -444,17 +449,31 @@ function SubmitSkill({
     if (!confirmed || !hash || hash === processed.current || !resolver) return;
     processed.current = hash;
     if (step === "register") {
-      setStep("pin");
+      // One tx, all records: pin (the gate's hash), uri (where to re-download
+      // the skill), and metadata (parsed SKILL.md frontmatter) — batched via the
+      // resolver's multicall so it's a single wallet confirmation.
+      const records: [string, string][] = [["safeskills.pin", pin!]];
+      if (skillUri) records.push(["safeskills.uri", skillUri]);
+      if (metadata && Object.keys(metadata).length > 0)
+        records.push(["safeskills.metadata", JSON.stringify(metadata)]);
+      const calls = records.map(([key, value]) =>
+        encodeFunctionData({
+          abi: permissionedResolverAbi,
+          functionName: "setText",
+          args: [node as Hex, key, value],
+        }),
+      );
+      setStep("records");
       writeContract({
         address: resolver,
         abi: permissionedResolverAbi,
-        functionName: "setText",
-        args: [node as Hex, "safeskills.pin", pin!],
+        functionName: "multicall",
+        args: [calls],
       });
-    } else if (step === "pin") {
+    } else if (step === "records") {
       setStep("done");
     }
-  }, [confirmed, hash, step, node, pin, resolver, writeContract]);
+  }, [confirmed, hash, step, node, pin, skillUri, metadata, resolver, writeContract]);
 
   async function computePin() {
     setBusy(true);
@@ -466,10 +485,18 @@ function SubmitSkill({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      const data = (await res.json()) as { pin?: string; bytes?: number; error?: string };
+      const data = (await res.json()) as {
+        pin?: string;
+        bytes?: number;
+        uri?: string;
+        metadata?: SkillMeta;
+        error?: string;
+      };
       if (!res.ok || !data.pin) throw new Error(data.error ?? "could not hash URL");
       setPin(data.pin);
       setBytes(data.bytes ?? null);
+      setSkillUri(data.uri ?? url);
+      setMetadata(data.metadata ?? null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -490,16 +517,16 @@ function SubmitSkill({
     });
   }
 
-  const pending = step === "register" || step === "pin";
+  const pending = step === "register" || step === "records";
 
   return (
     <section className="space-y-4 rounded-2xl border border-[#e7e5e1] bg-white p-6">
       <div>
         <h2 className="font-display text-xl font-semibold">2 · Submit a skill</h2>
         <p className="mt-1 text-sm text-[#78716c]">
-          Link its <span className="font-mono">SKILL.md</span> URL — we fetch and hash it, then pin
-          that hash on the skill&apos;s ENS name. Chainlink CRE re-fetches the same URL, reviews it,
-          and writes the verdict.
+          Link its <span className="font-mono">SKILL.md</span> URL — we fetch it, hash it, and parse
+          its frontmatter, then write the pin, source URL, and metadata to the skill&apos;s ENS name
+          in one tx. Chainlink CRE re-fetches the same URL, reviews it, and writes the verdict.
         </p>
       </div>
 
@@ -522,6 +549,8 @@ function SubmitSkill({
             onChange={(e) => {
               setUrl(e.target.value);
               setPin(null);
+              setSkillUri(null);
+              setMetadata(null);
             }}
             placeholder="https://raw.githubusercontent.com/acme/skills/main/weather/SKILL.md"
             className="w-full rounded-md border border-[#d6d3ce] px-3 py-2 font-mono text-sm outline-none focus:border-ink"
@@ -537,9 +566,22 @@ function SubmitSkill({
       </label>
 
       {pin && (
-        <div className="space-y-1 rounded-md bg-[#faf9f7] px-3 py-2 font-mono text-xs">
-          <div className="text-[#78716c]">content pin{bytes != null ? ` · ${bytes} bytes` : ""}</div>
-          <div className="break-all">{pin}</div>
+        <div className="space-y-2 rounded-md bg-[#faf9f7] px-3 py-2 text-xs">
+          <div className="font-mono">
+            <div className="text-[#78716c]">content pin{bytes != null ? ` · ${bytes} bytes` : ""}</div>
+            <div className="break-all">{pin}</div>
+          </div>
+          {metadata && Object.keys(metadata).length > 0 && (
+            <div className="space-y-0.5 border-t border-[#e7e5e1] pt-2">
+              <div className="text-[#78716c]">parsed metadata → safeskills.metadata</div>
+              {Object.entries(metadata).map(([k, v]) => (
+                <div key={k} className="break-words">
+                  <span className="text-[#a8a29e]">{k}:</span>{" "}
+                  <span className="text-[#57534e]">{Array.isArray(v) ? v.join(", ") : v}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {error && <p className="text-sm text-[#dc2626]">{error}</p>}
@@ -555,7 +597,11 @@ function SubmitSkill({
         onClick={publish}
         className="rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink/90 disabled:opacity-50"
       >
-        {step === "register" ? "Registering name…" : step === "pin" ? "Writing pin…" : "Submit skill →"}
+        {step === "register"
+          ? "Registering name…"
+          : step === "records"
+            ? "Writing records…"
+            : "Submit skill →"}
       </button>
 
       {step === "done" && (

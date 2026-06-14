@@ -2,7 +2,7 @@ import type { Address, Chain, PublicClient } from "viem";
 import { namehash } from "viem/ens";
 import { getEnsV2Addresses, makePublicClient } from "@aegis/chain";
 import type { Attestation, Hex, SkillResolver, SkillRecord } from "@aegis/core";
-import { TEXT_KEYS, attestationKey, parseAttestation, parseVerdict } from "../ens/records";
+import { TEXT_KEYS, attestationKey, parseAttestation, parseMetadata, parseVerdict } from "../ens/records";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
@@ -65,8 +65,10 @@ export class EnsV2Resolver implements SkillResolver {
     const node = namehash(name) as Hex;
     const universalResolverAddress = this.universalResolver();
 
-    const [pin, verdictRaw, address, ...attestationRaws] = await Promise.all([
+    const [pin, uri, metadataRaw, verdictRaw, address, ...attestationRaws] = await Promise.all([
       this.client.getEnsText({ name, key: TEXT_KEYS.pin, universalResolverAddress }),
+      this.client.getEnsText({ name, key: TEXT_KEYS.uri, universalResolverAddress }),
+      this.client.getEnsText({ name, key: TEXT_KEYS.metadata, universalResolverAddress }),
       this.client.getEnsText({ name, key: TEXT_KEYS.verdict, universalResolverAddress }),
       this.client.getEnsAddress({ name, universalResolverAddress }),
       ...this.providers.map((provider) =>
@@ -95,6 +97,8 @@ export class EnsV2Resolver implements SkillResolver {
       owner: (address ?? ZERO_ADDRESS) as Hex,
       verdict: parseVerdict(verdictRaw),
       attestations,
+      contentUri: uri ?? undefined,
+      metadata: parseMetadata(metadataRaw),
     };
   }
 }
