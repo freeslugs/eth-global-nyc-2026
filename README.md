@@ -256,3 +256,30 @@ passes (see [OWNERSHIP.md](./OWNERSHIP.md)); they are intentionally **stubbed** 
 `gate()` checks, first failure wins: fetched hash == pin → verdict present (if required) →
 verdict.reviewedHash == pin → verdict passed → riskScore within policy → not revoked → authorized
 (the Ledger gate).
+
+
+
+
+Variable: AEGIS_RESOLVER
+Value: ens
+Why: server reads the registry from chain (not mock)
+────────────────────────────────────────                       
+Variable: AEGIS_RPC_URL                                        
+Value: https://ethereum-sepolia-rpc.publicnode.com
+Why: Sepolia RPC for those reads
+────────────────────────────────────────
+Variable: NEXT_PUBLIC_ORG_REGISTRY                             
+Value: 0xeb5A6844C1C09F1DdDfb83cb4257943EBE80F3a4
+Why: /register "Create company" tx
+────────────────────────────────────────
+Variable: NEXT_PUBLIC_COMPANY
+Value: acme
+Why: publish flow: company skills go under
+────────────────────────────────────────
+Variable: NEXT_PUBLIC_COMPANY_REGISTRY
+Value: 0x9b469d1DA391B243797279f6dA748468226228EB
+Why: publish flow: where skills register
+────────────────────────────────────────
+Variable: NEXT_PUBLIC_ENS_RESOLVER
+Value: 0xaC3C69ac919226AA68749387F6FeD2c7c6147654
+Why: publish flow: where the pin is written
