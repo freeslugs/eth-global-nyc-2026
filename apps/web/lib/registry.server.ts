@@ -1,5 +1,5 @@
 import { gate, hashSkill, type GateResult, type SkillRecord, type Verdict } from "@aegis/core";
-import { buildAdapters, type Adapters } from "@aegis/adapters";
+import { buildAdapters, type Adapters, type SkillStatus } from "@aegis/adapters";
 
 export interface RegistryEntry {
   record: SkillRecord;
@@ -8,7 +8,7 @@ export interface RegistryEntry {
   /** Short description (mock; would be the ENS `description` text record). */
   description: string;
   /** Demo status badge from the seed (verified / poisoned / pending / revoked). */
-  status: string;
+  status: SkillStatus;
   /** The fetch uri used to re-verify the bytes. */
   fetchUri: string;
 }
