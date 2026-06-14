@@ -2,7 +2,6 @@ import type {
   SkillResolver,
   SkillFetcher,
   InstallSigner,
-  ReviewClient,
   VerdictWriter,
   SubmissionWatcher,
   Policy,
@@ -19,8 +18,6 @@ import { FileFetcher } from "./fetch/FileFetcher";
 import { IpfsFetcher } from "./fetch/IpfsFetcher";
 import { LocalSigner } from "./signer/LocalSigner";
 import { LedgerSigner } from "./signer/LedgerSigner";
-import { MockReview } from "./review/MockReview";
-import { ConfidentialAiClient } from "./review/ConfidentialAiClient";
 import { MockVerdictWriter } from "./verdict/MockVerdictWriter";
 import { EnsV2VerdictWriter } from "./verdict/EnsV2VerdictWriter";
 import { MockWatcher } from "./watcher/MockWatcher";
@@ -30,7 +27,6 @@ export interface Adapters {
   resolver: SkillResolver;
   fetcher: SkillFetcher;
   signer: InstallSigner;
-  review: ReviewClient;
   verdict: VerdictWriter;
   watcher: SubmissionWatcher;
   /** The shared mock store (explorer views, submit→consume loop). Mock mode only. */
@@ -68,14 +64,11 @@ export function buildAdapters(env: NodeJS.ProcessEnv = process.env): Adapters {
       ? new LedgerSigner()
       : new LocalSigner(env.AEGIS_PRIVATE_KEY as Hex | undefined);
 
-  const review: ReviewClient =
-    env.AEGIS_REVIEW === "chainlink" ? new ConfidentialAiClient() : new MockReview();
-
   const verdict: VerdictWriter =
     env.AEGIS_VERDICT === "ens" ? new EnsV2VerdictWriter() : new MockVerdictWriter(store);
 
   const watcher: SubmissionWatcher =
     env.AEGIS_WATCHER === "chain" ? new ChainWatcher() : new MockWatcher();
 
-  return { resolver, fetcher, signer, review, verdict, watcher, store, seed: store.seeded, policy: defaultPolicy };
+  return { resolver, fetcher, signer, verdict, watcher, store, seed: store.seeded, policy: defaultPolicy };
 }
