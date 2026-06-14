@@ -24,7 +24,7 @@ const config: Config = {
         // Aegis brand palette
         ink: "#1c1917",
         paper: "#f4f3f0",
-        night: "#16130f",
+        night: "#1f1b18",
         accent: "#0b8457",
         mint: "#d9f2e6",
       },
