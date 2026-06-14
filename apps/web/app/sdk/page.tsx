@@ -102,7 +102,7 @@ export default function SdkPage() {
       {/* ===== TWO PARTS ===== */}
       <section className="mx-auto max-w-6xl px-6 py-8">
         <div className="grid gap-px overflow-hidden rounded-2xl border border-[#e7e5e1] bg-[#e7e5e1] sm:grid-cols-2">
-          <div className="bg-white p-8">
+          <div className="bg-[#eafaf2] p-8">
             <div className="mb-2 font-display text-[15px] font-semibold text-accent">Part 1</div>
             <h2 className="text-xl font-semibold">Onboard</h2>
             <p className="mt-2 text-sm leading-relaxed text-[#57534e]">
@@ -111,7 +111,7 @@ export default function SdkPage() {
               persisted to <code className="font-mono text-xs">~/.safeskill/config.json</code>.
             </p>
           </div>
-          <div className="bg-white p-8">
+          <div className="bg-[#eaf3fd] p-8">
             <div className="mb-2 font-display text-[15px] font-semibold text-accent">Part 2</div>
             <h2 className="text-xl font-semibold">Gate</h2>
             <p className="mt-2 text-sm leading-relaxed text-[#57534e]">
