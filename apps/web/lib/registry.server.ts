@@ -74,21 +74,22 @@ function entryFromRecord(record: SkillRecord): RegistryEntry {
 }
 
 /**
- * The live catalog, resolved to current records (pin + attestations). In `ens`
- * mode we ENUMERATE the registry on-chain (companies → their subregistries →
- * skills) and union that with the seed, so anything created via the app appears
- * without editing the seed file. Resilient to names that don't resolve — a name
- * mid-creation, or a seeded name not deployed on this chain, shouldn't blank the
- * whole page.
+ * The live catalog, resolved to current records (pin + attestations + metadata).
+ * In `ens` mode the catalog is 100% on-chain: we ENUMERATE the registry
+ * (companies → their subregistries → skills) and resolve each name — NO seed
+ * overlay, because the chain is the source of truth and the seed exists only for
+ * mock mode (which has no chain to read). Resilient to names that don't resolve —
+ * a name mid-creation shouldn't blank the whole page.
  */
 async function crawlRegistry(): Promise<RegistryEntry[]> {
   const a = adapters();
+  const ensMode = process.env.AEGIS_RESOLVER === "ens";
   const seedByName = new Map(a.seed.map((s) => [s.name, s]));
 
-  // Union seed names with whatever is live on-chain (ens mode only).
-  const names = new Set(a.seed.map((s) => s.name));
+  // ens mode: names come purely from on-chain discovery. mock mode: the seed.
+  const names = new Set<string>();
   let ownerByName: Record<string, string> = {};
-  if (process.env.AEGIS_RESOLVER === "ens") {
+  if (ensMode) {
     try {
       const found = await discover();
       for (const name of found.skillNames) names.add(name);
@@ -96,6 +97,8 @@ async function crawlRegistry(): Promise<RegistryEntry[]> {
     } catch (e) {
       console.warn(`registry: on-chain discovery failed — ${(e as Error).message}`);
     }
+  } else {
+    for (const s of a.seed) names.add(s.name);
   }
 
   const list = [...names];
@@ -106,7 +109,8 @@ async function crawlRegistry(): Promise<RegistryEntry[]> {
       // the registry's token owner instead when discovery found one.
       const owner = ownerByName[name];
       if (owner) record.owner = owner as typeof record.owner;
-      const s = seedByName.get(name);
+      // ens mode: derive everything from on-chain records; mock mode uses seed.
+      const s = ensMode ? undefined : seedByName.get(name);
       return s
         ? { record, title: s.title, description: s.description, status: s.status, fetchUri: s.fetchUri }
         : entryFromRecord(record);
