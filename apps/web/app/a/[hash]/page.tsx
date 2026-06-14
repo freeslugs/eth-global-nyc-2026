@@ -41,6 +41,28 @@ export default async function SkillPage({ params }: { params: Promise<{ hash: st
         </CardContent>
       </Card>
 
+      {record.metadata && Object.keys(record.metadata).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Metadata</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <table className="w-full text-sm">
+              <tbody>
+                {Object.entries(record.metadata).map(([k, v]) => (
+                  <tr key={k} className="border-b border-[#f5f4f1] last:border-0">
+                    <td className="w-40 py-2 pr-3 align-top font-mono text-xs text-muted-foreground">
+                      {k}
+                    </td>
+                    <td className="py-2 align-top">{Array.isArray(v) ? v.join(", ") : String(v)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Attestations</CardTitle>

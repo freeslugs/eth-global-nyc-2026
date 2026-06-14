@@ -1,6 +1,6 @@
 import { gate, hashSkill, type GateResult, type SkillRecord, type Verdict } from "@aegis/core";
 import { buildAdapters, type Adapters, type SkillStatus } from "@aegis/adapters";
-import { discoverSkillNames } from "./discovery.server";
+import { discover } from "./discovery.server";
 
 export interface RegistryEntry {
   record: SkillRecord;
@@ -74,9 +74,12 @@ export async function getRegistry(): Promise<RegistryEntry[]> {
 
   // Union seed names with whatever is live on-chain (ens mode only).
   const names = new Set(a.seed.map((s) => s.name));
+  let ownerByName: Record<string, string> = {};
   if (process.env.AEGIS_RESOLVER === "ens") {
     try {
-      for (const name of await discoverSkillNames()) names.add(name);
+      const found = await discover();
+      for (const name of found.skillNames) names.add(name);
+      ownerByName = found.ownerByName;
     } catch (e) {
       console.warn(`registry: on-chain discovery failed — ${(e as Error).message}`);
     }
@@ -86,6 +89,10 @@ export async function getRegistry(): Promise<RegistryEntry[]> {
   const settled = await Promise.allSettled(
     list.map(async (name): Promise<RegistryEntry> => {
       const record = await a.resolver.resolve(name);
+      // The resolver derives owner from the addr record (unset for skills); use
+      // the registry's token owner instead when discovery found one.
+      const owner = ownerByName[name];
+      if (owner) record.owner = owner as typeof record.owner;
       const s = seedByName.get(name);
       return s
         ? { record, title: s.title, description: s.description, status: s.status, fetchUri: s.fetchUri }

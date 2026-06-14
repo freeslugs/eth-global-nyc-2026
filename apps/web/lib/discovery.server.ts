@@ -1,4 +1,5 @@
 import { createPublicClient, decodeAbiParameters, http, isAddress, type Address } from "viem";
+import { labelhash } from "viem/ens";
 import { sepolia } from "viem/chains";
 
 /**
@@ -38,9 +39,21 @@ const getSubregistryAbi = [
     inputs: [{ name: "label", type: "string" }],
     outputs: [{ type: "address" }],
   },
+  {
+    name: "ownerOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "id", type: "uint256" }],
+    outputs: [{ type: "address" }],
+  },
 ] as const;
 
 const ZERO = "0x0000000000000000000000000000000000000000";
+
+/** Token id for a label in a PermissionedRegistry: labelhash with the low 32 (version) bits cleared. */
+function tokenId(label: string): bigint {
+  return BigInt(labelhash(label)) & ~0xffffffffn;
+}
 
 export interface DiscoveredOrg {
   /** Company label, e.g. "gilad-co". */
@@ -57,6 +70,8 @@ export interface Discovered {
   orgs: DiscoveredOrg[];
   /** Every skill name across all companies, flattened. */
   skillNames: string[];
+  /** Skill name -> on-chain token owner (the wallet that registered it). */
+  ownerByName: Record<string, Address>;
 }
 
 function client() {
@@ -94,13 +109,15 @@ const TTL_MS = 30_000;
  * Returns an empty catalog (never throws) if the org registry isn't configured.
  */
 export async function discover(): Promise<Discovered> {
-  if (!ORG_REGISTRY || !isAddress(ORG_REGISTRY)) return { orgs: [], skillNames: [] };
+  if (!ORG_REGISTRY || !isAddress(ORG_REGISTRY))
+    return { orgs: [], skillNames: [], ownerByName: {} };
   if (cache && Date.now() - cache.at < TTL_MS) return cache.value;
 
   const c = client();
   const companyLabels = await labelsOf(c, ORG_REGISTRY);
 
   const orgs: DiscoveredOrg[] = [];
+  const ownerByName: Record<string, Address> = {};
   for (const label of companyLabels) {
     const subregistry = (await c.readContract({
       address: ORG_REGISTRY,
@@ -111,15 +128,29 @@ export async function discover(): Promise<Discovered> {
     if (!subregistry || subregistry === ZERO) continue;
     const name = `${label}.${ROOT}`;
     const skillLabels = await labelsOf(c, subregistry);
-    orgs.push({
-      label,
-      name,
-      subregistry,
-      skillNames: skillLabels.map((s) => `${s}.${name}`),
-    });
+    orgs.push({ label, name, subregistry, skillNames: skillLabels.map((s) => `${s}.${name}`) });
+
+    // The skill's real owner is its registry token owner (we never set an addr
+    // record), so read ownerOf for each. Tolerant: a token that doesn't resolve
+    // just has no owner entry.
+    await Promise.all(
+      skillLabels.map(async (s) => {
+        try {
+          const owner = (await c.readContract({
+            address: subregistry,
+            abi: getSubregistryAbi,
+            functionName: "ownerOf",
+            args: [tokenId(s)],
+          })) as Address;
+          if (owner && owner !== ZERO) ownerByName[`${s}.${name}`] = owner;
+        } catch {
+          // token not found / not enumerable — skip
+        }
+      }),
+    );
   }
 
-  const value: Discovered = { orgs, skillNames: orgs.flatMap((o) => o.skillNames) };
+  const value: Discovered = { orgs, skillNames: orgs.flatMap((o) => o.skillNames), ownerByName };
   cache = { at: Date.now(), value };
   return value;
 }
