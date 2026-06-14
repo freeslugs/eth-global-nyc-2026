@@ -25,14 +25,14 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@aegis/adapters": "workspace:*",
-    "@aegis/chain": "workspace:*",
-    "@aegis/core": "workspace:*",
     "commander": "^13.0.0",
     "picocolors": "^1.1.1",
     "viem": "^2.22.0"
   },
   "devDependencies": {
+    "@aegis/adapters": "workspace:*",
+    "@aegis/chain": "workspace:*",
+    "@aegis/core": "workspace:*",
     "@aegis/eslint-config": "workspace:*",
     "@aegis/tsconfig": "workspace:*",
     "@types/node": "^20.17.0",

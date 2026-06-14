@@ -1,5 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import pc from "picocolors";
 import { Safeskill } from "./client";
@@ -243,6 +245,46 @@ program
     }
   });
 
+// ── bootstrap: install the gate into Claude Code ──────────────────────────────
+
+/** The `safeskills` meta-skill SKILL.md — teaches the agent to gate before installing. */
+function metaSkill(gate: string): string {
+  return `---
+name: safeskills
+description: Gate any agent skill against the Aegis ENS registry before installing it into Claude Code. Use whenever the user asks to install, add, or load a skill — so tampered or unreviewed skills are blocked or require explicit sign-off, never trusted on the source's say-so.
+---
+
+# Safe Skills — verify before you install
+
+You are the install gate for agent skills. NEVER hand-write a SKILL.md into
+\`~/.claude/skills/\` directly. Instead run the \`safeskill\` gate: it resolves the
+skill's pinned hash from the on-chain (ENS) registry, re-hashes the candidate
+file locally, and decides **auto-approve / needs-override (a signature) / blocked**.
+
+## When the user asks to install / add / load a skill
+
+1. Identify the skill's **ENS name** (e.g. \`weather.acme.safeskills.eth\`) and the
+   path to the **candidate SKILL.md** to install.
+2. Run the gate (it installs into Claude Code's layout on success):
+
+   \`\`\`
+   ${gate} use <ens-name> --file <path-to-SKILL.md> --claude
+   \`\`\`
+
+3. Act on the result — and report it to the user verbatim:
+   - **installed** (auto-approved, or a signed override) → it passed the gate and
+     is now available; a new Claude Code session will discover it.
+   - **BLOCKED** → do NOT install. The content hash didn't match the on-chain pin
+     (possible tampering) — a signature cannot override this.
+   - **needs-override with no/declined signature** → not installed; explain why.
+
+Never bypass the gate. If the gate command is missing or errors, tell the user —
+do not fall back to writing the skill file yourself.
+
+> One-time prereq (run once): \`${gate} onboard --ens --local --min-security 70\`
+`;
+}
+
 async function loadOrExit(): Promise<Safeskill> {
   try {
     return await Safeskill.load();
@@ -251,5 +293,34 @@ async function loadOrExit(): Promise<Safeskill> {
     process.exit(1);
   }
 }
+
+program
+  .command("init")
+  .description("Install the 'safeskills' meta-skill into Claude Code so the agent gates skills before installing them.")
+  .option("-d, --dir <dir>", "skills directory to install into", join(homedir(), ".claude", "skills"))
+  .option("--print", "print the SKILL.md to stdout instead of writing it")
+  .action(async (opts: { dir: string; print?: boolean }) => {
+    // The gate command the meta-skill tells the agent to run = however THIS CLI
+    // was invoked. Run `init` from a persistent install (repo build or a global
+    // bin), not an ephemeral `npx` temp dir, so the path stays valid.
+    const gate = `node ${fileURLToPath(import.meta.url)}`;
+    const content = metaSkill(gate);
+
+    if (opts.print) {
+      console.log(content);
+      return;
+    }
+
+    const skillDir = join(opts.dir, "safeskills");
+    await mkdir(skillDir, { recursive: true });
+    const out = join(skillDir, "SKILL.md");
+    await writeFile(out, content);
+
+    console.log(pc.bold(pc.green("\n  ✓ installed the safeskills gate into Claude Code")));
+    console.log(pc.dim(`  skill   ${out}`));
+    console.log(pc.dim(`  gate    ${gate} use <name> --file <path> --claude`));
+    console.log(pc.yellow(`\n  next: onboard once, then restart Claude Code:`));
+    console.log(pc.dim(`    ${gate} onboard --ens --local --min-security 70\n`));
+  });
 
 program.parseAsync(process.argv);

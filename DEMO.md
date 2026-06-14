@@ -30,13 +30,27 @@ cleanup.
 # build the CLI
 pnpm turbo build --filter @aegis/safeskill
 
+# install the gate INTO Claude Code (writes ~/.claude/skills/safeskills/SKILL.md).
+# This is the meta-skill that makes Claude gate any skill before installing it.
+node packages/safeskill/dist/cli.js init
+
 # onboard: read verdicts from real ENS (Sepolia), sign overrides with a local dev key,
-# auto-approve passing skills at >= 70% security. (--env-file loads AEGIS_RPC_URL from .env)
-node --env-file=.env packages/safeskill/dist/cli.js onboard --ens --local --min-security 70
+# auto-approve passing skills at >= 70% security.
+node packages/safeskill/dist/cli.js onboard --ens --local --min-security 70
 
 # clean slate — make sure no demo skill is lingering from a previous run
 rm -rf ~/.claude/skills/weather
 ```
+
+> **`npx` flavor (optional).** `npm pack` in `packages/safeskill` produces a
+> self-contained `aegis-safeskill-0.0.0.tgz`; then `npx ./aegis-safeskill-0.0.0.tgz init`
+> works with no global install (it pulls only `commander`/`picocolors`/`viem`; the
+> `@aegis/*` code is bundled in). Run `init` from a **persistent** install (the repo
+> build), not an ephemeral npx temp dir, so the gate path the meta-skill writes stays valid.
+
+> **Two demo modes.** *Manual:* you tell Claude the exact `safeskill use …` command.
+> *Natural (better):* after `init` + a session restart, you just say "install the
+> weather skill" and Claude reaches for the gate itself via the `safeskills` meta-skill.
 
 > The `safeskill` CLI does **not** auto-load `.env`, so always invoke it with
 > `node --env-file=.env …` (or `export AEGIS_RPC_URL=…` first). Without the RPC
@@ -96,9 +110,10 @@ record, so it currently lands on **needs-override**. To show a clean
 ## 2. Cleanup (after the demo)
 
 ```bash
-rm -rf ~/.claude/skills/weather   # remove the installed demo skill
-rm -rf ~/.safeskill               # un-onboard (signer + policy config)
-rm -rf /tmp/demo-claude           # only if you used a temp --dir
+rm -rf ~/.claude/skills/weather     # remove the installed demo skill
+rm -rf ~/.claude/skills/safeskills  # remove the gate meta-skill (from `init`)
+rm -rf ~/.safeskill                 # un-onboard (signer + policy config)
+rm -rf /tmp/demo-claude             # only if you used a temp --dir
 ```
 Then restart Claude Code so it no longer lists the skill. Done — no global state,
 no chain state changed.
