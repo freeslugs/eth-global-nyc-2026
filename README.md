@@ -68,7 +68,7 @@ Two ports + the workflow that drives them. Nothing else touches Chainlink.
 | **Real Ledger signer** (`@ledgerhq/hw-app-eth`) | `packages/adapters/src/signer/LedgerSigner.ts` |
 | Shared sign/recover helpers | `packages/adapters/src/signer/auth.ts` |
 | Where the gate enforces it | `packages/core/src/gate.ts` → `unauthorized` branch |
-| CLI install / `--no-ledger` bypass | `apps/cli/src/index.ts` → `install` command |
+| Gate's below-policy Ledger override | `packages/safeskill/src/client.ts` → `use` |
 | Contract test | `packages/core/testing/contracts/signer.contract.ts` |
 | Env flag | `AEGIS_SIGNER=ledger` |
 
@@ -114,7 +114,7 @@ Two ports + the workflow that drives them. Nothing else touches Chainlink.
 | Which skill is poisoned vs verified | `packages/adapters/fixtures/registry.seed.json` (`exfil.…` = poisoned) |
 | What the detector looks for | `packages/adapters/src/review/MockReview.ts` → `POISON_MARKERS` |
 | Engine-level poisoned fixtures (unit tests) | `packages/core/src/__tests__/fixtures.ts` |
-| See it blocked end-to-end | `node apps/cli/dist/index.js check exfil.acme.safeskills.eth` |
+| See it blocked end-to-end | `node packages/safeskill/dist/cli.js check exfil.acme.safeskills.eth` |
 
 ### 📄 The SKILL.md content + verdict (the data model)
 
@@ -198,24 +198,6 @@ if (!result.installed) throw new Error(result.error);                  // fail-c
 Full docs + the policy model: [`packages/safeskill/README.md`](./packages/safeskill/README.md).
 `AEGIS_RESOLVER=ens` / `safeskill onboard --ens` swaps the demo registry for real ENS v2 on Sepolia.
 
-### Low-level CLI demo (`safeskills` — the engine `gate()`, no policy layer)
-
-```bash
-pnpm --filter @aegis/cli build
-
-# content verified (exit 0): hash matches the pin and the verdict passes
-node apps/cli/dist/index.js check weather.acme.safeskills.eth
-
-# BLOCK verdict_fail (exit 1): the poisoned skill's verdict is "fail"
-node apps/cli/dist/index.js check exfil.acme.safeskills.eth
-
-# BLOCK unauthorized (exit 1): the demo bypass — no Ledger signature
-node apps/cli/dist/index.js install weather.acme.safeskills.eth --no-ledger
-
-# ALLOW + install: LocalSigner (mock) authorizes, file written to ./.skills
-node apps/cli/dist/index.js install weather.acme.safeskills.eth
-```
-
 ### Web explorer (deployed at [eth-global-nyc-2026.vercel.app](https://eth-global-nyc-2026.vercel.app))
 
 ```bash
@@ -239,13 +221,19 @@ pnpm --filter @aegis/chain generate
 
 ## The seam (mocks → real)
 
-Every adapter defaults to a mock so the repo runs with **zero chain config**. Flip a flag to reach a
-stub that throws `NotImplementedError` with a `TODO(...)` marker — proving the seam exists:
+Every adapter defaults to a mock so the repo runs with **zero chain config**. Flip a flag in
+`buildAdapters` (`packages/adapters/src/factory.ts`) to reach a real adapter — the ones not yet
+wired throw `NotImplementedError` with a `TODO(...)` marker, proving the seam exists:
 
-```bash
-AEGIS_RESOLVER=ens node apps/cli/dist/index.js check weather.acme.safeskills.eth
-#  ✗ ERROR  TODO(ens): resolve safeskills.pin/safeskills.verdict/... via viem
-```
+| Flag | Stub |
+|---|---|
+| `AEGIS_SIGNER=ledger` | `adapters/src/signer/LedgerSigner.ts` |
+| `AEGIS_FETCHER=ipfs` | `adapters/src/fetch/IpfsFetcher.ts` |
+| `AEGIS_REVIEW=chainlink` | `adapters/src/review/ConfidentialAiClient.ts` |
+| `AEGIS_WATCHER=chain` | `adapters/src/watcher/ChainWatcher.ts` |
+
+`AEGIS_RESOLVER=ens` and `AEGIS_VERDICT=ens` are already wired to real ENS v2 on Sepolia — that's
+what powers the web explorer.
 
 Flags (see `.env.example`): `AEGIS_RESOLVER` `AEGIS_FETCHER` `AEGIS_SIGNER` `AEGIS_REVIEW`
 `AEGIS_VERDICT` `AEGIS_WATCHER`. Each real adapter must pass the same `*.contract` suite its mock

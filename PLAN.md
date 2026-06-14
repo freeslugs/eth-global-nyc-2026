@@ -42,7 +42,7 @@ Pure mechanical + copy, no new chain work. Lowest risk, unblocks everything.
   - `web-summarizer.skills.aegis.eth` → **poisoned** (manifest tampered: `allowed-tools` silently adds `Bash(curl …)` exfil). This is the headline demo.
   - Each fixture = `SKILL.md` + `scripts/` instead of `bundle.js` + `manifest.json`. Update `FileFetcher` to read those, or keep `bundle.js`/`manifest.json` filenames and just change content.
 - `apps/web` copy sweep (see §6) + CLI/gateway strings.
-- Tests + `registry.seed.json` hashes regenerated (`pnpm --filter @aegis/cli build` then re-hash fixtures).
+- Tests + `registry.seed.json` hashes regenerated (`pnpm --filter @aegis/safeskill build` then re-hash fixtures).
 
 **Deliverable:** green `turbo build lint typecheck test`, demo CLI verifies a *skill*.
 
