@@ -31,16 +31,23 @@ cleanup.
 pnpm turbo build --filter @aegis/safeskill
 
 # install the gate INTO Claude Code (writes ~/.claude/skills/safeskills/SKILL.md).
-# This is the meta-skill that makes Claude gate any skill before installing it.
+# This is the meta-skill that makes Claude gate skills AND walk you through your
+# security policy on first use.
 node packages/safeskill/dist/cli.js init
 
-# onboard: read verdicts from real ENS (Sepolia), sign overrides with a local dev key,
-# auto-approve passing skills at >= 70% security.
+# onboard — OPTIONAL: Claude can do this for you conversationally (see "Onboarding"
+# below). To set it yourself instead:
 node packages/safeskill/dist/cli.js onboard --ens --local --min-security 70
 
 # clean slate — make sure no demo skill is lingering from a previous run
 rm -rf ~/.claude/skills/weather
 ```
+
+> **Onboarding can be conversational.** After `init` + a session restart, just tell
+> Claude *"set up Safe Skills"* — it runs `safeskill status`, asks your policy
+> (auto-approve threshold, sign-vs-block, trusted/blocked publishers), and runs
+> `onboard` for you (even authoring a custom `--policy` JSON from your description).
+> The manual `onboard` above is only if you'd rather set it yourself.
 
 > **`npx` flavor (optional).** `npm pack` in `packages/safeskill` produces a
 > self-contained `aegis-safeskill-0.0.0.tgz`; then `npx ./aegis-safeskill-0.0.0.tgz init`
@@ -49,8 +56,8 @@ rm -rf ~/.claude/skills/weather
 > build), not an ephemeral npx temp dir, so the gate path the meta-skill writes stays valid.
 
 > **Two demo modes.** *Manual:* you tell Claude the exact `safeskill use …` command.
-> *Natural (better):* after `init` + a session restart, you just say "install the
-> weather skill" and Claude reaches for the gate itself via the `safeskills` meta-skill.
+> *Natural (better):* after setup, you just say "install the weather skill" and Claude
+> reaches for the gate itself via the `safeskills` meta-skill.
 
 > The `safeskill` CLI does **not** auto-load `.env`, so always invoke it with
 > `node --env-file=.env …` (or `export AEGIS_RPC_URL=…` first). Without the RPC
