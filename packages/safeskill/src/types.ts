@@ -16,7 +16,6 @@ export type Decision = "auto-approve" | "needs-override" | "blocked";
 export interface SkillAssessment {
   name: string;
   publisher: string;
-  owner: string;
   /** 0–100, higher = safer (`100 - verdict.riskScore`). Undefined with no verdict. */
   securityRating?: number;
   /** The verdict status on the ENS name, if any. */

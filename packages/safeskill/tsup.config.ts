@@ -1,9 +1,11 @@
 import { defineConfig } from "tsup";
 
-// Bundle the workspace deps (and their @noble crypto) INTO the output so the
-// packed tarball is self-contained — `npx ./safeskill-*.tgz` then works with
-// only the real npm deps (commander, picocolors, viem) installed.
-const noExternal = [/^@aegis\//, /^@noble\//];
+// Bundle EVERYTHING (workspace deps, their @noble crypto, and the public npm
+// runtime deps) INTO the output so `dist/cli.js` is a single self-contained file
+// that runs with a bare `node cli.js` — no node_modules. This is what lets
+// `init` copy the CLI next to the installed skill and `npx ./safeskill-*.tgz`
+// work from an ephemeral temp dir. Only the native Ledger stack stays external.
+const noExternal = [/^@aegis\//, /^@noble\//, "commander", "picocolors", "viem"];
 
 // Keep the Ledger stack OUT of the bundle: @aegis/chain dynamically imports it
 // only in `--ledger` mode, and it drags in native node-hid/usb bindings that
@@ -21,6 +23,12 @@ function externalizeLedger(options: { external?: string[] }): void {
   options.external = [...(options.external ?? []), ...ledgerExternal];
 }
 
+// Bundling CJS deps (commander, picocolors) into ESM leaves esbuild's __require
+// shim, which throws "Dynamic require of X" for their `require("events")` etc.
+// Defining a real `require` via createRequire makes the shim delegate to it.
+const cjsInteropBanner =
+  "import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);";
+
 export default defineConfig([
   // The SDK library — imported by an agent / app code.
   {
@@ -30,6 +38,7 @@ export default defineConfig([
     clean: true,
     sourcemap: true,
     target: "es2022",
+    banner: { js: cjsInteropBanner },
     noExternal,
     esbuildOptions: externalizeLedger,
   },
@@ -41,7 +50,7 @@ export default defineConfig([
     clean: false,
     sourcemap: true,
     target: "es2022",
-    banner: { js: "#!/usr/bin/env node" },
+    banner: { js: `#!/usr/bin/env node\n${cjsInteropBanner}` },
     noExternal,
     esbuildOptions: externalizeLedger,
   },

@@ -1,15 +1,54 @@
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, cp } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { createInterface } from "node:readline/promises";
 import { Command } from "commander";
 import pc from "picocolors";
-import { Safeskill } from "./client";
+import { Safeskill, probeLedger, CONFIRM_TOKEN } from "./client";
 import { loadConfig, loadPolicyFile } from "./config";
 import { PRESETS } from "./policy";
 import type { Decision, SafeskillPolicy, SignerKind, SkillDecision } from "./types";
 
 const program = new Command();
+
+/**
+ * Pick a hardware/local signer by probing for a Ledger. In an interactive
+ * terminal, if none is found we ask the user to plug in + unlock the device and
+ * retry, looping until a Ledger appears or they skip to the local dev key.
+ * When stdin isn't a TTY (e.g. the agent runs onboarding for the user), we can't
+ * block on input, so we fall back to local immediately and let the caller retry.
+ */
+async function detectSignerWithRetry(): Promise<SignerKind> {
+  const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY);
+  for (;;) {
+    console.log(pc.dim("  · looking for a connected Ledger…"));
+    const addr = await probeLedger();
+    if (addr) {
+      console.log(pc.green(`  · Ledger detected (${addr}) — using it`));
+      return "ledger";
+    }
+    if (!interactive) {
+      console.log(pc.yellow("  · no Ledger found — falling back to local dev key"));
+      return "local";
+    }
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const ans = (
+      await rl.question(
+        pc.yellow(
+          "  · no Ledger found. Connect + unlock it (Ethereum app open), then press Enter to retry — or type 's' to use the local dev key: ",
+        ),
+      )
+    )
+      .trim()
+      .toLowerCase();
+    rl.close();
+    if (ans === "s" || ans === "skip") {
+      console.log(pc.yellow("  · skipping — using local dev key"));
+      return "local";
+    }
+  }
+}
 
 program
   .name("safeskill")
@@ -35,7 +74,6 @@ function rating(d: SkillDecision): string {
 
 function printDecision(d: SkillDecision): void {
   console.log(pc.dim(`  name      ${d.record.name}`));
-  console.log(pc.dim(`  owner     ${d.record.owner}`));
   console.log(pc.dim(`  pin       ${d.record.pin}`));
   console.log(pc.dim(`  fetched   ${d.fetchedHash}`));
   if (d.record.verdict) {
@@ -68,8 +106,8 @@ function printPolicy(p: SafeskillPolicy): void {
 program
   .command("onboard")
   .description("Hook up a signer (Ledger optional) and set a customizable policy.")
-  .option("--ledger", "authorize overrides with a real Ledger device")
-  .option("--local", "authorize overrides with a local dev key (demo, no device)")
+  .option("--ledger", "force a real Ledger device (fail if none captured)")
+  .option("--local", "force a local dev key (demo, no device)")
   .option("--no-signer", "don't hook up any signer (overrides become impossible)")
   .option("--preset <name>", `use a named policy preset (${Object.keys(PRESETS).join(", ")})`)
   .option("--policy <file>", "load a custom policy from a JSON file")
@@ -87,7 +125,18 @@ program
       requireVerdict: boolean;
       ens?: boolean;
     }) => {
-      const signer: SignerKind = opts.signer === false ? "none" : opts.ledger ? "ledger" : "local";
+      // Signer selection: explicit flags win; with neither, probe for a
+      // connected Ledger and fall back to the local dev key only if none is found.
+      let signer: SignerKind;
+      if (opts.signer === false) {
+        signer = "none";
+      } else if (opts.ledger) {
+        signer = "ledger";
+      } else if (opts.local) {
+        signer = "local";
+      } else {
+        signer = await detectSignerWithRetry();
+      }
 
       // Build the policy override (precedence handled by Safeskill.onboard).
       let policy: SafeskillPolicy | undefined;
@@ -107,6 +156,9 @@ program
         }
       }
 
+      if (signer === "ledger") {
+        console.log(pc.cyan("  → check your Ledger: review the policy and press Approve to sign…"));
+      }
       let ss: Safeskill;
       try {
         ss = await Safeskill.onboard({
@@ -176,8 +228,12 @@ program
   .description("List the skills in the on-chain registry and what the policy would decide for each.")
   .action(async () => {
     const ss = await loadOrExit();
-    const skills = ss.listSkills();
-    console.log(pc.bold(`\n  ${skills.length} skills in the registry`) + pc.dim(`  (policy: ${ss.config.policy.name})\n`));
+    const skills = await ss.listSkills();
+    const src = ss.config.resolver === "ens" ? "on-chain (ENS)" : "demo";
+    console.log(pc.bold(`\n  ${skills.length} skills in the registry`) + pc.dim(`  (${src}, policy: ${ss.config.policy.name})\n`));
+    if (skills.length === 0 && ss.config.resolver === "ens") {
+      console.log(pc.dim("  (none discovered on-chain — check the RPC / registry deployment)\n"));
+    }
     for (const s of skills) {
       let d: SkillDecision;
       try {
@@ -186,8 +242,9 @@ program
         console.log(`  ${pc.red("ERROR".padEnd(14))}  ${pc.dim("—  ")}  ${s.name} ${pc.dim(`(${(err as Error).message})`)}`);
         continue;
       }
+      const desc = d.record.metadata?.description || s.description;
       console.log(`  ${badge(d.decision).padEnd(24)}  ${rating(d)}  ${s.name}`);
-      console.log(pc.dim(`  ${" ".repeat(14)}        ${s.description}`));
+      if (desc) console.log(pc.dim(`  ${" ".repeat(14)}        ${desc}`));
     }
     console.log("");
   });
@@ -216,22 +273,24 @@ program
   .option("-d, --dir <dir>", "install dir", ".skills")
   .option("-f, --file <path>", "re-hash this local SKILL.md against the ENS pin (required in --ens mode)")
   .option("--claude", "install into ~/.claude/skills/<name>/SKILL.md so Claude Code discovers it")
-  .option("--no-override", "reject (don't even offer the Ledger override) for below-policy skills")
-  .action(async (name: string, opts: { dir: string; file?: string; claude?: boolean; override: boolean }) => {
+  .option("--no-override", "reject (don't even offer the override) for below-policy skills")
+  .option("--confirm <word>", `type ${CONFIRM_TOKEN} to authorize a local-signer override (a Ledger prompts on-device instead)`)
+  .action(async (name: string, opts: { dir: string; file?: string; claude?: boolean; override: boolean; confirm?: string }) => {
     const ss = await loadOrExit();
     try {
       const d = await ss.check(name, { file: opts.file });
       printDecision(d);
 
       if (d.decision === "needs-override" && opts.override && ss.config.signer !== "none") {
-        console.log(pc.yellow(`\n  ⚠ below policy — authorizing override with ${ss.config.signer} signer…`));
+        const how = ss.config.signer === "ledger" ? "approve on the Ledger" : `confirm with --confirm ${CONFIRM_TOKEN}`;
+        console.log(pc.yellow(`\n  ⚠ below policy — needs override (${how})…`));
       }
 
       // In --claude mode, default the install dir to the user's Claude Code skills folder.
       const dir = opts.claude && opts.dir === ".skills" ? join(homedir(), ".claude", "skills") : opts.dir;
-      const result = await ss.use(name, { dir, file: opts.file, claude: opts.claude, allowOverride: opts.override });
+      const result = await ss.use(name, { dir, file: opts.file, claude: opts.claude, allowOverride: opts.override, confirm: opts.confirm });
       if (result.installed) {
-        const how = result.overridden ? pc.yellow("(Ledger override)") : pc.green("(auto-approved)");
+        const how = result.overridden ? pc.yellow(`(${ss.config.signer} override)`) : pc.green("(auto-approved)");
         console.log(pc.green(`\n  ✓ installed → ${result.path} `) + how);
         process.exit(0);
       } else {
@@ -320,7 +379,12 @@ Report the result to the user verbatim:
   Claude Code session discovers it.
 - **BLOCKED** → do NOT install. The hash didn't match the on-chain pin (possible
   tampering) — a signature cannot override this.
-- **needs-override with no/declined signature** → not installed; explain why.
+- **needs-override** → the skill is below policy and needs the user's approval:
+  - With a **ledger** signer: re-run the same command; the device prompts — the user
+    presses **Approve** on-device.
+  - With a **local** signer: ask the user to approve, and only if they agree, re-run
+    with \`--confirm ${CONFIRM_TOKEN}\` appended. Do NOT add \`--confirm\` on your own
+    initiative — it represents the user's explicit go-ahead.
 
 Never bypass the gate or hand-write a skill file. If the gate command is missing
 or errors, tell the user instead of falling back.
@@ -341,19 +405,37 @@ program
   .description("Install the 'safeskills' meta-skill into Claude Code so the agent gates skills before installing them.")
   .option("-d, --dir <dir>", "skills directory to install into", join(homedir(), ".claude", "skills"))
   .option("--print", "print the SKILL.md to stdout instead of writing it")
-  .action(async (opts: { dir: string; print?: boolean }) => {
-    // The gate command the meta-skill tells the agent to run = however THIS CLI
-    // was invoked. Run `init` from a persistent install (repo build or a global
-    // bin), not an ephemeral `npx` temp dir, so the path stays valid.
-    const cliPath = fileURLToPath(import.meta.url);
-    // TODO(contenturi): bake the temporary demo content dir into the gate command so
-    // check/use resolve a candidate without --file until contentUri is pinned on-chain.
-    const demoContent = join(dirname(cliPath), "..", "demo-content");
+  .option(
+    "--dev",
+    "bake a gate that runs THIS cli + the current Node binary directly (needs the repo " +
+      "node_modules). Required for --ledger: the portable engine has no native node-hid. " +
+      "Run under the Node that can load node-hid (e.g. `nvm use 22`).",
+  )
+  .action(async (opts: { dir: string; print?: boolean; dev?: boolean }) => {
+    const skillDir = join(opts.dir, "safeskills");
+    const srcCli = fileURLToPath(import.meta.url);
+    const engineSrc = dirname(srcCli);
+    const engineDir = join(skillDir, "engine");
+
+    // Two gate flavors:
+    // - portable (default): copy the self-contained `dist/` as `engine/` beside the
+    //   skill and invoke it with a plain `node`. Survives npx's temp dir; --local only,
+    //   since the engine has no native node-hid for a Ledger.
+    // - dev (--dev): point the gate at THIS running cli (the repo build, which has the
+    //   @ledgerhq/* + node-hid transport in node_modules) and bake the ABSOLUTE current
+    //   Node binary, so a Ledger signs regardless of the shell's default Node version.
+    const cliPath = opts.dev ? srcCli : join(engineDir, "cli.js");
+    const nodeBin = opts.dev ? process.execPath : "node";
+
     // Public, keyless Sepolia RPC baked in so the gate resolves ENS with zero env
     // setup in any session. Safe to hardcode — it's a public read endpoint, no API
-    // key. (Don't ever bake a keyed RPC like Alchemy/Infura here.)
+    // key. (Don't ever bake a keyed RPC like Alchemy/Infura here.) Skill content is
+    // pulled from each skill's on-chain `contentUri` (ENS → IPFS) — no local dir.
     const rpc = process.env.AEGIS_RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com";
-    const gate = `AEGIS_RPC_URL='${rpc}' AEGIS_CONTENT_DIR='${demoContent}' node '${cliPath}'`;
+    // Co-locate onboarding state with the skill: config.json lands beside SKILL.md
+    // (SAFESKILL_HOME = the skill dir), so `rm -rf <skillDir>` is a complete uninstall
+    // and a fresh install starts un-onboarded. Standalone CLI use keeps ~/.safeskill.
+    const gate = `AEGIS_RPC_URL='${rpc}' SAFESKILL_HOME='${skillDir}' '${nodeBin}' '${cliPath}'`;
     const content = metaSkill(gate);
 
     if (opts.print) {
@@ -361,16 +443,27 @@ program
       return;
     }
 
-    const skillDir = join(opts.dir, "safeskills");
     await mkdir(skillDir, { recursive: true });
+    // Portable mode: persist the engine beside the skill (skip the copy in --dev, where
+    // the gate points back at the repo build, or if init was run from the copy itself).
+    if (!opts.dev && srcCli !== cliPath) {
+      await cp(engineSrc, engineDir, { recursive: true });
+      // Mark the engine dir as ESM so `node engine/cli.js` doesn't reparse + warn.
+      await writeFile(join(engineDir, "package.json"), '{\n  "type": "module"\n}\n');
+    }
     const out = join(skillDir, "SKILL.md");
     await writeFile(out, content);
 
     console.log(pc.bold(pc.green("\n  ✓ installed the safeskills gate into Claude Code")));
     console.log(pc.dim(`  skill   ${out}`));
+    console.log(pc.dim(`  engine  ${cliPath}${opts.dev ? "  (dev: repo build)" : ""}`));
+    console.log(pc.dim(`  node    ${nodeBin}`));
     console.log(pc.dim(`  gate    ${gate} use <name> --file <path> --claude`));
+    if (opts.dev) {
+      console.log(pc.cyan(`  ledger  this gate can read/sign on a connected Ledger (native node-hid via repo node_modules)`));
+    }
     console.log(pc.yellow(`\n  next: onboard once, then restart Claude Code:`));
-    console.log(pc.dim(`    ${gate} onboard --ens --local --min-security 70\n`));
+    console.log(pc.dim(`    ${gate} onboard --ens --min-security 70\n`));
   });
 
 program.parseAsync(process.argv);

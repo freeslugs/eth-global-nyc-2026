@@ -151,9 +151,18 @@ describe("use — install behavior", () => {
 
   it("installs a below-policy skill via a verified signature override", async () => {
     const ss = await onboard();
-    const r = await ss.use("pdf-tools.acme.safeskills.eth", { dir: installDir });
+    const r = await ss.use("pdf-tools.acme.safeskills.eth", { dir: installDir, confirm: "CONFIRM" });
     expect(r.installed).toBe(true);
     expect(r.overridden).toBe(true);
+  });
+
+  it("a local-signer override is refused without the CONFIRM token — no file written", async () => {
+    const ss = await onboard();
+    const r = await ss.use("pdf-tools.acme.safeskills.eth", { dir: installDir });
+    expect(r.installed).toBe(false);
+    expect(r.overridden).toBe(false);
+    expect(r.error).toMatch(/--confirm CONFIRM/);
+    expect(await exists(join(installDir, "pdf-tools.acme.safeskills.eth.md"))).toBe(false);
   });
 });
 
@@ -179,7 +188,7 @@ describe("FAIL-CLOSED: a failed/missing override NEVER installs", () => {
     // Sabotage the signer so authorize() returns a signature that won't verify.
     const signer = (ss as unknown as { signer: { authorize: () => Promise<string> } }).signer;
     signer.authorize = async () => "0x" + "00".repeat(65);
-    const r = await ss.use("sync.evilcorp.safeskills.eth", { dir: installDir });
+    const r = await ss.use("sync.evilcorp.safeskills.eth", { dir: installDir, confirm: "CONFIRM" });
     expect(r.installed).toBe(false);
     expect(r.error).toMatch(/did not verify/);
     expect(await exists(join(installDir, "sync.evilcorp.safeskills.eth.md"))).toBe(false);
@@ -191,7 +200,7 @@ describe("FAIL-CLOSED: a failed/missing override NEVER installs", () => {
     signer.authorize = async () => {
       throw new Error("user rejected on device");
     };
-    const r = await ss.use("sync.evilcorp.safeskills.eth", { dir: installDir });
+    const r = await ss.use("sync.evilcorp.safeskills.eth", { dir: installDir, confirm: "CONFIRM" });
     expect(r.installed).toBe(false);
     expect(r.error).toMatch(/override not authorized/);
     expect(await exists(join(installDir, "sync.evilcorp.safeskills.eth.md"))).toBe(false);

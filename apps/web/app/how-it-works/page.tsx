@@ -96,7 +96,7 @@ export default function HowItWorksPage() {
             Get the SDK →
           </Link>
           <Link
-            href="/"
+            href="/registry"
             className="rounded-md border border-[#d6d3ce] bg-white px-6 py-3 text-base font-medium text-ink transition-colors hover:bg-[#faf9f7]"
           >
             See the live registry

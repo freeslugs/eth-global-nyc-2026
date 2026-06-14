@@ -12,7 +12,6 @@ export function assess(record: SkillRecord, fetchedHash: string, revoked: boolea
   return {
     name: record.name,
     publisher: publisherOf(record.name),
-    owner: record.owner,
     securityRating: record.verdict ? 100 - record.verdict.riskScore : undefined,
     verdictStatus: record.verdict?.status,
     hasVerdict: !!record.verdict,

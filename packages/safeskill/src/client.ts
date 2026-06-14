@@ -1,7 +1,8 @@
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { keccak256, toBytes } from "viem";
 import { hashSkill, type AuthRequest, type InstallSigner, type SkillFetcher, type SkillRecord, type SkillResolver, type Verdict } from "@aegis/core";
-import { EnsV2Resolver, IpfsFetcher, LedgerSigner, LocalSigner } from "@aegis/adapters";
+import { EnsV2Resolver, HttpFetcher, LedgerSigner, LocalSigner, discoverSkillNames } from "@aegis/adapters";
 import { DEFAULT_POLICY, loadConfig, saveConfig } from "./config";
 import { decide } from "./decide";
 import { PRESETS, thresholdPolicy, validatePolicy } from "./policy";
@@ -24,6 +25,13 @@ export interface OnboardOptions {
   minSecurityRating?: number;
   /** Used with `minSecurityRating`. Default true. */
   requireVerdict?: boolean;
+  /**
+   * Require a verified signature over the policy at onboarding (default true when a
+   * signer is configured). A `local` key signs silently; a `ledger` PROMPTS the user
+   * to Approve on the device — selecting a Ledger means a real signature, or onboarding
+   * fails. Set false only for non-interactive/programmatic onboarding.
+   */
+  consentToPolicy?: boolean;
 }
 
 /** What `check()` accepts. */
@@ -50,7 +58,17 @@ export interface UseOptions extends CheckOptions {
    * per skill), so the agent auto-discovers it. Default false (flat `<name>.md`).
    */
   claude?: boolean;
+  /**
+   * Explicit human approval token for a `local`-signer override. A hardware Ledger
+   * IS the approval (press Approve on-device), but a software `local` key would sign
+   * silently — so for `local` we require the caller to pass `CONFIRM` as a deliberate
+   * in-the-loop confirmation before the override proceeds. Ignored for `ledger`.
+   */
+  confirm?: string;
 }
+
+/** The literal a `local`-signer override must pass as `confirm` to authorize. */
+export const CONFIRM_TOKEN = "CONFIRM";
 
 /** Resolve the OnboardOptions into a concrete policy (precedence: policy > preset > threshold > default). */
 function resolvePolicy(opts: OnboardOptions): SafeskillPolicy {
@@ -70,17 +88,59 @@ function buildSigner(kind: SignerKind, env: NodeJS.ProcessEnv): InstallSigner | 
   return new LocalSigner(env.AEGIS_PRIVATE_KEY as `0x${string}` | undefined);
 }
 
+/**
+ * Probe for a connected, unlocked Ledger with the Ethereum app open. Returns
+ * its address if reachable, otherwise undefined (no device / locked / wrong
+ * app / transport unavailable). Used to auto-pick the signer when the user
+ * onboards without explicitly choosing --ledger or --local.
+ */
+export async function probeLedger(): Promise<string | undefined> {
+  try {
+    return await new LedgerSigner().address();
+  } catch {
+    return undefined;
+  }
+}
+
 function buildResolver(kind: ResolverKind): SkillResolver {
   return kind === "ens" ? new EnsV2Resolver() : new DemoResolver();
 }
 
 function buildFetcher(kind: ResolverKind): SkillFetcher {
-  return kind === "ens" ? new IpfsFetcher() : new DemoFetcher();
+  return kind === "ens" ? new HttpFetcher() : new DemoFetcher();
 }
 
 /** A skill is revoked? Only the demo registry knows; ENS revocation isn't wired yet. */
 function revokedFor(kind: ResolverKind, name: string): boolean {
   return kind === "demo" ? isRevoked(name) : false;
+}
+
+/**
+ * The message the signer authorizes when a policy is generated. It commits to the
+ * EXACT policy (pin = hash of the policy JSON), so approving it on the device is a
+ * real, verifiable consent to *this* configuration — not just an address read.
+ */
+function onboardingAuthRequest(policy: SafeskillPolicy): AuthRequest {
+  const pin = hashSkill(new TextEncoder().encode(JSON.stringify(policy)));
+  return {
+    node: keccak256(toBytes("safeskills.onboarding")),
+    name: `safeskills:onboarding:${policy.name}`,
+    pin,
+    verdict: { status: "pass", riskScore: 0, attestationId: "safeskills:onboarding", reviewedHash: pin },
+  };
+}
+
+/** Turn a signer/transport failure into an actionable message (esp. the portable-engine Ledger case). */
+function signerFailureHint(signer: SignerKind, err: unknown): string {
+  const msg = (err as Error)?.message ?? String(err);
+  if (signer === "ledger" && /MODULE_NOT_FOUND|hw-transport-node-hid|node-hid|bindings|Cannot find/.test(msg)) {
+    return (
+      "Ledger transport unavailable — this gate has no native USB driver. Reinstall the " +
+      "gate Ledger-capable: `nvm use 22 && node packages/safeskill/dist/cli.js init --dev`, " +
+      "then onboard again with the device connected + unlocked (Ethereum app open)."
+    );
+  }
+  return msg;
 }
 
 /**
@@ -111,12 +171,33 @@ export class Safeskill {
 
     let signerAddress: string | undefined;
     const s = buildSigner(signer, env);
-    if (s) {
+    const consent = opts.consentToPolicy ?? true;
+    if (s && consent) {
+      // Generating a policy REQUIRES a verified signature from the chosen signer.
+      // local → silent; ledger → the device shows the policy and the user presses
+      // Approve. No signature, no onboarding (no silent "address not captured").
+      let addr: `0x${string}`;
+      try {
+        addr = await s.address();
+      } catch (err) {
+        throw new Error(signerFailureHint(signer, err));
+      }
+      const req = onboardingAuthRequest(policy);
+      let sig: `0x${string}`;
+      try {
+        sig = await s.authorize(req); // ledger: blocks until the user approves on-device
+      } catch (err) {
+        throw new Error(`policy signature failed (declined or device error): ${signerFailureHint(signer, err)}`);
+      }
+      if (s.verify(req, sig, addr) !== true) {
+        throw new Error("policy signature did not verify — not onboarded");
+      }
+      signerAddress = addr;
+    } else if (s) {
+      // consent explicitly disabled — best-effort address read, no signature.
       try {
         signerAddress = await s.address();
       } catch {
-        // Device not connected (e.g. real Ledger absent). Save anyway; overrides
-        // will surface the error when actually attempted.
         signerAddress = undefined;
       }
     }
@@ -142,7 +223,19 @@ export class Safeskill {
   // ── Part 2: skill fetching + gating ───────────────────────────────────────
 
   /** The hardcoded on-chain registry catalog. */
-  listSkills(): RegistrySkill[] {
+  /**
+   * The catalog. In `ens` mode this is enumerated LIVE from the on-chain registry
+   * via the shared `@aegis/adapters` discovery (the same code the web app uses) —
+   * no hardcoded list. In `demo` mode it's the fixture registry.
+   */
+  async listSkills(): Promise<RegistrySkill[]> {
+    if (this.config.resolver === "ens") {
+      const names = await discoverSkillNames();
+      return names.map((name) => {
+        const dot = name.indexOf(".");
+        return { name, title: name, description: "", publisher: dot === -1 ? name : name.slice(dot + 1) };
+      });
+    }
     return DEMO_REGISTRY;
   }
 
@@ -200,6 +293,16 @@ export class Safeskill {
       }
       if (!this.signer) {
         return { decision, installed: false, overridden: false, error: 'below policy and no signer configured (onboarded with signer: "none")' };
+      }
+      // A `local` (software) signer has no device prompt, so require an explicit typed
+      // confirmation as the human-in-the-loop approval. A `ledger` IS the prompt.
+      if (this.config.signer === "local" && opts.confirm !== CONFIRM_TOKEN) {
+        return {
+          decision,
+          installed: false,
+          overridden: false,
+          error: `needs your approval — re-run with --confirm ${CONFIRM_TOKEN} to authorize the override with your local key`,
+        };
       }
       let authorized: boolean;
       try {
