@@ -1,6 +1,37 @@
 import type { SkillRecord } from "@aegis/core";
 import type { Decision, PolicyRule, SafeskillPolicy, SkillAssessment } from "./types";
 
+/** A review of a skill: the official verdict OR any third-party attestation. */
+interface Review {
+  status: "pass" | "fail";
+  /** 0–100, higher = safer. */
+  securityRating: number;
+  /** The hash the reviewer actually looked at — must bind to the pin. */
+  reviewedHash: string;
+}
+
+/**
+ * The review that counts. The official `safeskills.verdict` wins if present;
+ * otherwise ANY provider's attestation counts — a passing one (best score) lets
+ * a skill clear the policy without a dedicated verdict review. Failing reviews
+ * are surfaced too (worst score) so a "fail" still drives the decision.
+ */
+function effectiveReview(record: SkillRecord): Review | undefined {
+  if (record.verdict) {
+    return {
+      status: record.verdict.status,
+      securityRating: 100 - record.verdict.riskScore,
+      reviewedHash: record.verdict.reviewedHash,
+    };
+  }
+  const atts = record.attestations ?? [];
+  const passing = atts.filter((a) => a.status === "pass").sort((a, b) => b.score - a.score);
+  if (passing[0]) return { status: "pass", securityRating: passing[0].score, reviewedHash: passing[0].reviewedHash };
+  const failing = atts.filter((a) => a.status === "fail").sort((a, b) => a.score - b.score);
+  if (failing[0]) return { status: "fail", securityRating: failing[0].score, reviewedHash: failing[0].reviewedHash };
+  return undefined;
+}
+
 /**
  * Derive the policy-independent facts about a skill. This mirrors the integrity
  * invariants the core `gate()` enforces (fetched hash == pin == reviewed hash),
@@ -8,13 +39,14 @@ import type { Decision, PolicyRule, SafeskillPolicy, SkillAssessment } from "./t
  */
 export function assess(record: SkillRecord, fetchedHash: string, revoked: boolean): SkillAssessment {
   const pinOk = fetchedHash === record.pin;
-  const reviewedOk = record.verdict ? record.verdict.reviewedHash === record.pin : true;
+  const review = effectiveReview(record);
+  const reviewedOk = review ? review.reviewedHash === record.pin : true;
   return {
     name: record.name,
     publisher: publisherOf(record.name),
-    securityRating: record.verdict ? 100 - record.verdict.riskScore : undefined,
-    verdictStatus: record.verdict?.status,
-    hasVerdict: !!record.verdict,
+    securityRating: review?.securityRating,
+    verdictStatus: review?.status,
+    hasVerdict: !!review,
     hashMatches: pinOk && reviewedOk,
     revoked,
   };

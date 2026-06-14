@@ -103,59 +103,54 @@ rm -rf ~/.claude/skills/weather
 
 ---
 
-## 1. The demo (inside a Claude Code session, in this repo)
+## 1. The demo (inside a Claude Code session)
 
-### Beat A — BLOCK (a tampered skill)
+The gate reads everything **live from ENS (Sepolia)**. You just tell Claude to install
+a skill by its ENS name; the `safeskills` meta-skill runs the gate. Three outcomes —
+decided by the on-chain review, not the agent's say-so.
+
+> **The policy (threshold-70):** a skill **auto-passes** if it has a **passing review
+> from any provider with security ≥ 70** (an official `safeskills.verdict` OR a
+> third-party `safeskills.attestation.*`). No passing review → **needs your approval**.
+> A content-hash mismatch → **blocked**, always (a signature can't override it).
+
+### Beat A — AUTO-PASS (no signature) ✅
 Tell Claude:
-> "Install the weather skill from `packages/adapters/fixtures/poisoned.md`,
->  gating it against `weather.acme.safeskills.eth`."
+> "Install `stitch-skill.acme.safeskills.eth`."
 
-Claude runs:
-```bash
-node --env-file=.env packages/safeskill/dist/cli.js use \
-  weather.acme.safeskills.eth --file packages/adapters/fixtures/poisoned.md --claude
-```
-→ **BLOCKED** — the file's hash doesn't match the on-chain pin (integrity floor).
-Nothing is written. A signature can't override it.
+→ It has a passing attestation (`my-local-verifier.eth`, 80/100) → **AUTO-APPROVE** →
+installed to `~/.claude/skills/stitch-skill/SKILL.md`. **No Ledger, no CONFIRM.** The
+gate fetched the SKILL.md from the on-chain `contentUri` and the hash matched the pin.
 
-### Beat B — SIGN + install (the legitimate skill)
+### Beat B — NEEDS APPROVAL (sign) ✍️
 Tell Claude:
-> "Now install the legitimate version from `packages/adapters/fixtures/clean.md`."
+> "Install `algorithmic-art.acme.safeskills.eth`."
 
-Claude runs:
-```bash
-node --env-file=.env packages/safeskill/dist/cli.js use \
-  weather.acme.safeskills.eth --file packages/adapters/fixtures/clean.md --claude
-```
-→ hash matches the pin → **needs-override** → **local signature** authorizes it →
-installed to `~/.claude/skills/weather/SKILL.md` (frontmatter intact).
+→ Content + matching hash, but **no passing review** → **NEEDS OVERRIDE**. Claude asks
+you to approve. With the **local** signer it re-runs with `--confirm CONFIRM` once you
+say go; with a **Ledger** it prompts you to press **Approve** on-device. Then it installs.
 
-### Beat C — Claude actually uses it
+### Beat C — BLOCKED (tampered) 🚫
+Tell Claude:
+> "Install `stitch-skill.acme.safeskills.eth` from this local file `<an-edited-SKILL.md>`."
+
+Claude runs `use stitch-skill.acme.safeskills.eth --file <edited.md> --claude` → the
+edited file's hash **doesn't match the on-chain pin** → **BLOCKED** by the integrity
+floor. Nothing is written; a signature can't save it.
+
+### Beat D — Claude actually uses it
 Skills load at session start, so **start a new Claude Code session**, then:
-> "Use the weather skill for Tokyo."
+> "Use the stitch skill on this design."
 
-Claude now discovers and runs `weather`. The poisoned version was never installed,
-so it simply doesn't exist to the agent.
-
----
-
-## Auto-approve (optional 3rd policy beat)
-
-`weather` has an on-chain **attestation** (pass, 88) but no `safeskills.verdict`
-record, so it currently lands on **needs-override**. To show a clean
-**AUTO-APPROVE** (no signature needed):
-
-- **Option 1 — no transaction:** derive the verdict from the existing attestation
-  (ask Claude to wire it in `safeskill`/the resolver). Recommended.
-- **Option 2 — one transaction:** set `safeskills.verdict` on `weather`.
-  TODO: add a `scripts/set-verdict.ts` (mirrors `attest.ts`) and run it as the org owner.
+Claude discovers and runs the installed skill. The blocked/tampered one was never
+written, so it doesn't exist to the agent.
 
 ---
 
 ## 2. Cleanup (after the demo)
 
 ```bash
-rm -rf ~/.claude/skills/weather     # remove the installed demo skill
+rm -rf ~/.claude/skills/stitch-skill ~/.claude/skills/algorithmic-art  # installed demo skills
 rm -rf ~/.claude/skills/safeskills  # remove the gate + onboarding (config.json lives here now)
 rm -rf ~/.safeskill                 # only if you ran the CLI standalone (legacy config location)
 rm -rf /tmp/demo-claude             # only if you used a temp --dir
@@ -183,24 +178,22 @@ Current demo pins (Sepolia):
 - `exfil.acme.safeskills.eth`   → `sha256:d186df88…` = `poisoned.md`  ✅
 - TODO: add the rest as you pin them.
 
-### TODO(contenturi): pin a real content location
+### Content fetch + the no-contentUri skills
 
-The gate is **ENS-only**: it reads each skill's on-chain **`contentUri`**, fetches the
-bytes (IPFS), and re-hashes them against the pinned hash. `init` no longer bakes any
-local content dir. Today's demo pins set a **hash** but not yet a `contentUri`, so
-`check`/`use weather…` correctly report *"no contentUri"* until a publisher pins one —
-this is the honest ENS state, not a bug. To gate such a skill before it's pinned, pass
-`--file <path>` explicitly, or set `AEGIS_CONTENT_DIR=<dir>` for that one command (an
-opt-in dev escape hatch that reads `<dir>/<label>.md`; the integrity check is still
-real). **The real fix is pinning a `contentUri`/IPFS hash on-chain** (search
-`TODO(contenturi)` in `packages/safeskill/src`).
+The gate is **ENS-only**: it reads each skill's on-chain **`contentUri`** (a plain
+`https://…` URL — e.g. a raw GitHub link, no IPFS) via `HttpFetcher`, then re-hashes the
+bytes against the pinned hash. Skills WITH a `contentUri` (stitch-skill, algorithmic-art,
+geo-audit) gate end-to-end. Skills that pinned a **hash but no `contentUri`** (weather,
+exfil, …) correctly report *"no contentUri"* — honest ENS state, not a bug. To gate one
+of those before it's pinned, pass `--file <path>` explicitly. **The real fix is pinning a
+`contentUri` on-chain.**
 
 
 #### secret thoughts... (working runbook)
 
 0. clean slate (removing the skill dir also removes onboarding — config.json lives there)
 ```
-rm -rf ~/.claude/skills/safeskills ~/.claude/skills/weather
+rm -rf ~/.claude/skills/safeskills ~/.claude/skills/stitch-skill ~/.claude/skills/algorithmic-art
 ```
 
 1. build + install the gate. TWO flavors — pick by whether you want the Ledger:
@@ -228,17 +221,23 @@ claude
 set up Safe Skills
 ```
 
-3. set up policy + SIGN on the Ledger. Pick **Ledger**, answer the policy questions →
-   onboarding builds a policy-consent message and the **device prompts: press Approve**.
-   That signature IS the policy generation — a verified `signer ledger (0x25e8…154bc)`,
-   not a silent address read. (If it says "no address captured", you're on the portable
-   gate — redo step 1a.)
+3. set up policy + signer. Answer the policy questions; pick your signer:
+   - **Local** (current default — no device): onboarding signs the policy silently;
+     installs that need approval ask you to **type CONFIRM**.
+   - **Ledger** (needs step 1a's `--dev` gate): the **device prompts — press Approve**
+     to sign the policy; a verified `signer ledger (0x25e8…154bc)`, not a silent read.
+     (If it says "no address captured", you're on the portable gate — redo step 1a.)
 
-4. happy path → install  `stitch::react-native` — auto-approves (≥70, passes). No Ledger.
+4. ✅ AUTO-PASS → "install `stitch-skill.acme.safeskills.eth`" → auto-approves (passing
+   review 80 ≥ 70). **No signature.** Installs to `~/.claude/skills/stitch-skill/`.
 
-5. sad path (block) → install `exfil.acme` (Data Sync) → **BLOCKED**, hash ≠ on-chain pin
-   (tampered). A signature can't override it. No Ledger.
+5. ✍️ NEEDS APPROVAL → "install `algorithmic-art.acme.safeskills.eth`" → **needs-override**
+   (no passing review). Approve: **type CONFIRM** (local signer) — Claude re-runs with
+   `--confirm CONFIRM` — or **press Approve on the Ledger**. Then it installs.
 
-6. override path → install `weather.acme` (Weather Lookup) → **needs-override** →
-   **press Approve on the Ledger** to clear-sign → installed → use it ("weather for NYC").
+6. 🚫 BLOCKED → "install `stitch-skill.acme.safeskills.eth` from `<an-edited-SKILL.md>`"
+   → gate runs `use … --file <edited.md>` → hash ≠ on-chain pin → **BLOCKED** (integrity
+   floor). A signature can't override it.
+
+7. start a NEW Claude session → "use the stitch skill" → Claude runs the installed skill.
 
