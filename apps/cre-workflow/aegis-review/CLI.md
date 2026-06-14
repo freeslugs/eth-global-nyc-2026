@@ -33,6 +33,26 @@ node --env-file=.env packages/adapters/scripts/ai-tee-result.ts <inference-id>
 node --env-file=.env packages/adapters/scripts/ai-tee-result.ts <inference-id> --poll
 ```
 
+Then write it to ENS manually:
+
+```sh
+node --env-file=.env packages/adapters/scripts/attest.ts \
+  geo-audit.acme.safeskills.eth pass 100 chainlink.eth
+```
+
+## Server-side path (no CRE deployment needed)
+
+Runs the full flow — ENS lookup → fetch SKILL.md → Confidential AI → ENS write.
+Use this while CRE deploy access is pending, or to trigger attestations from the server.
+
+```sh
+# From repo root
+node --env-file=.env packages/adapters/scripts/ai-tee-attest.ts \
+  geo-audit.acme.safeskills.eth
+```
+
+Needs `.env`: `AEGIS_PRIVATE_KEY`, `AEGIS_RPC_URL`, `AEGIS_ENS_RESOLVER`, `CONFIDENTIAL_AI_API_KEY`.
+
 ## Secrets
 
 ```sh
