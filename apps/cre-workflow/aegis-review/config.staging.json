@@ -2,7 +2,7 @@
   "chainSelectorName": "ethereum-testnet-sepolia",
   "resolverAddress": "0xaC3C69ac919226AA68749387F6FeD2c7c6147654",
   "attestationsAddress": "0x8672C05bcF9A7D90eB919bC58d20dF8F682E33F9",
-  "writeAttestation": false,
+  "writeAttestation": true,
   "confidentialAiBaseUrl": "https://confidential-ai-dev-preview.cldev.cloud",
   "confidentialAiModel": "qwen3.6",
   "pollMaxAttempts": 300
