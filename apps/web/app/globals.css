@@ -39,3 +39,14 @@ body {
 ::selection {
   background: #d9f2e6;
 }
+
+/* Site-wide keyboard focus ring. Most CTAs/nav links are hand-rolled <a>/<button>
+   without a focus style, so a single accent outline here keeps focus visible and
+   consistent everywhere instead of being repeated per element. */
+a:focus-visible,
+button:focus-visible,
+[role="menuitem"]:focus-visible {
+  outline: 2px solid #0b8457;
+  outline-offset: 2px;
+  border-radius: 4px;
+}

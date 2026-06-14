@@ -1,6 +1,10 @@
+import { unstable_cache } from "next/cache";
 import { gate, hashSkill, type GateResult, type SkillRecord, type Verdict } from "@aegis/core";
 import { buildAdapters, type Adapters, type SkillStatus } from "@aegis/adapters";
-import { discoverSkillNames } from "./discovery.server";
+import { discover } from "./discovery.server";
+
+/** Shared TTL for the on-chain crawl cache (seconds). */
+export const REGISTRY_REVALIDATE = 30;
 
 export interface RegistryEntry {
   record: SkillRecord;
@@ -29,53 +33,84 @@ function prettyLabel(label: string): string {
     .join(" ");
 }
 
-/** Demo status badge for a discovered skill, derived from its on-chain verdict. */
+/**
+ * Status badge for a discovered skill, from its on-chain reviews. A skill is
+ * reviewed either by the legacy single `verdict` or by per-provider
+ * `attestations` — both count. Security-first: any failing review wins (poisoned)
+ * over any passing one; a passing review with no failures is verified; nothing
+ * reviewed yet is pending.
+ */
 function deriveStatus(record: SkillRecord): SkillStatus {
-  if (record.verdict?.status === "pass") return "verified";
-  if (record.verdict?.status === "fail") return "poisoned";
+  const attestations = record.attestations ?? [];
+  const failed = record.verdict?.status === "fail" || attestations.some((a) => a.status === "fail");
+  if (failed) return "poisoned";
+  const passed = record.verdict?.status === "pass" || attestations.some((a) => a.status === "pass");
+  if (passed) return "verified";
   return "pending";
 }
 
-/** A registry entry for a skill discovered on-chain (no seed metadata to draw on). */
+/** First string from a metadata field that may be a string or string[]. */
+function metaText(v: string | string[] | undefined): string | undefined {
+  if (Array.isArray(v)) return v.join(", ");
+  return v || undefined;
+}
+
+/**
+ * A registry entry for a skill discovered on-chain. Prefers the skill's own
+ * on-chain metadata (parsed SKILL.md frontmatter) for title/description, falling
+ * back to a prettified label + org when a record predates metadata.
+ */
 function entryFromRecord(record: SkillRecord): RegistryEntry {
   const [skill, ...rest] = record.name.split(".");
   const org = rest.length > 1 ? rest.slice(0, -1).join(".") : rest.join(".");
   return {
     record,
-    title: prettyLabel(skill ?? record.name),
-    description: org ? `Published under ${org}` : "On-chain skill",
+    title: metaText(record.metadata?.name) ?? prettyLabel(skill ?? record.name),
+    description:
+      metaText(record.metadata?.description) ?? (org ? `Published under ${org}` : "On-chain skill"),
     status: deriveStatus(record),
-    fetchUri: "",
+    fetchUri: record.contentUri ?? "",
   };
 }
 
 /**
- * The live catalog, resolved to current records (pin + attestations). In `ens`
- * mode we ENUMERATE the registry on-chain (companies → their subregistries →
- * skills) and union that with the seed, so anything created via the app appears
- * without editing the seed file. Resilient to names that don't resolve — a name
- * mid-creation, or a seeded name not deployed on this chain, shouldn't blank the
- * whole page.
+ * The live catalog, resolved to current records (pin + attestations + metadata).
+ * In `ens` mode the catalog is 100% on-chain: we ENUMERATE the registry
+ * (companies → their subregistries → skills) and resolve each name — NO seed
+ * overlay, because the chain is the source of truth and the seed exists only for
+ * mock mode (which has no chain to read). Resilient to names that don't resolve —
+ * a name mid-creation shouldn't blank the whole page.
  */
-export async function getRegistry(): Promise<RegistryEntry[]> {
+async function crawlRegistry(): Promise<RegistryEntry[]> {
   const a = adapters();
+  const ensMode = process.env.AEGIS_RESOLVER === "ens";
   const seedByName = new Map(a.seed.map((s) => [s.name, s]));
 
-  // Union seed names with whatever is live on-chain (ens mode only).
-  const names = new Set(a.seed.map((s) => s.name));
-  if (process.env.AEGIS_RESOLVER === "ens") {
+  // ens mode: names come purely from on-chain discovery. mock mode: the seed.
+  const names = new Set<string>();
+  let ownerByName: Record<string, string> = {};
+  if (ensMode) {
     try {
-      for (const name of await discoverSkillNames()) names.add(name);
+      const found = await discover();
+      for (const name of found.skillNames) names.add(name);
+      ownerByName = found.ownerByName;
     } catch (e) {
       console.warn(`registry: on-chain discovery failed — ${(e as Error).message}`);
     }
+  } else {
+    for (const s of a.seed) names.add(s.name);
   }
 
   const list = [...names];
   const settled = await Promise.allSettled(
     list.map(async (name): Promise<RegistryEntry> => {
       const record = await a.resolver.resolve(name);
-      const s = seedByName.get(name);
+      // The resolver derives owner from the addr record (unset for skills); use
+      // the registry's token owner instead when discovery found one.
+      const owner = ownerByName[name];
+      if (owner) record.owner = owner as typeof record.owner;
+      // ens mode: derive everything from on-chain records; mock mode uses seed.
+      const s = ensMode ? undefined : seedByName.get(name);
       return s
         ? { record, title: s.title, description: s.description, status: s.status, fetchUri: s.fetchUri }
         : entryFromRecord(record);
@@ -90,6 +125,18 @@ export async function getRegistry(): Promise<RegistryEntry[]> {
     .filter((r): r is PromiseFulfilledResult<RegistryEntry> => r.status === "fulfilled")
     .map((r) => r.value);
 }
+
+/**
+ * The cached catalog. The on-chain crawl (discovery + per-skill resolve) is the
+ * expensive part — dozens of sequential RPC round-trips — so we run it at most
+ * once per `REGISTRY_REVALIDATE` window and share the result across every page,
+ * the API route, and pin lookups. Bust it on demand with `revalidateTag("registry")`
+ * after a new skill is registered so it appears without waiting for the TTL.
+ */
+export const getRegistry = unstable_cache(crawlRegistry, ["aegis-registry"], {
+  revalidate: REGISTRY_REVALIDATE,
+  tags: ["registry"],
+});
 
 /** A single entry by its pinned content hash. */
 export async function getEntryByPin(pin: string): Promise<RegistryEntry | undefined> {

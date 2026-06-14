@@ -2,9 +2,10 @@ import Link from "next/link";
 import { getRegistry } from "@/lib/registry.server";
 import { SkillList } from "@/components/skill-list";
 import { ArchitectureDiagram } from "@/components/architecture-diagram";
+import { CARD_TINTS } from "@/lib/card-tints";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 const STEPS = [
   {
@@ -133,14 +134,22 @@ export default async function HomePage() {
         <p className="mt-2 text-center text-[#78716c]">
           Four steps from a Markdown skill to verifiable execution.
         </p>
-        <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map((s) => (
-            <div key={s.n}>
-              <div className="mb-3.5 font-display text-[15px] font-semibold text-accent">{s.n}</div>
-              <div className="mb-2 text-lg font-semibold">{s.title}</div>
-              <p className="text-sm leading-relaxed text-[#78716c]">{s.body}</p>
-            </div>
-          ))}
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {STEPS.map((s, i) => {
+            const tint = CARD_TINTS[i % CARD_TINTS.length]!;
+            return (
+              <div
+                key={s.n}
+                className={`rounded-xl border p-6 transition-colors ${tint.bg} ${tint.border} ${tint.hoverBorder}`}
+              >
+                <div className="mb-3.5 font-display text-[15px] font-semibold text-accent">
+                  {s.n}
+                </div>
+                <div className="mb-2 text-lg font-semibold">{s.title}</div>
+                <p className="text-sm leading-relaxed text-[#57534e]">{s.body}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -187,10 +196,18 @@ export default async function HomePage() {
         <h2 className="text-center font-display text-2xl font-semibold tracking-[-0.01em]">
           Built on tools you trust
         </h2>
-        <div className="mt-7 flex flex-wrap justify-center gap-8 text-base text-[#57534e]">
-          {["Chainlink CRE", "ENS", "Ledger", "Agent Skills", "AI Attestor", "CLI"].map((x) => (
-            <span key={x}>{x}</span>
-          ))}
+        <div className="mt-7 flex flex-wrap justify-center gap-3">
+          {["Chainlink CRE", "ENS", "Ledger", "Agent Skills", "AI Attestor", "CLI"].map((x, i) => {
+            const tint = CARD_TINTS[i % CARD_TINTS.length]!;
+            return (
+              <span
+                key={x}
+                className={`rounded-full border px-4 py-2 text-sm font-medium text-ink ${tint.bg} ${tint.border}`}
+              >
+                {x}
+              </span>
+            );
+          })}
         </div>
       </section>
 

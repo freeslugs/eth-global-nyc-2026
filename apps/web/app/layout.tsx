@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
-      <body className="min-h-screen bg-paper font-sans text-ink antialiased">
+      <body className="flex min-h-screen flex-col bg-paper font-sans text-ink antialiased">
         <Providers>
           <header className="sticky top-0 z-50 border-b border-[#e7e5e1] bg-white/90 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center gap-5 px-6 py-4">
@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </header>
 
-          <main>{children}</main>
+          <main className="flex-1">{children}</main>
 
           <footer className="border-t border-[#e7e5e1] bg-white">
             <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-[#78716c] sm:flex-row">

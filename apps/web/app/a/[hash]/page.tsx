@@ -5,9 +5,13 @@ import { getEntryByPin } from "@/lib/registry.server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, statusVariant } from "@/components/ui/badge";
 import { EnsName } from "@/components/ens-name";
+import { statusMeta } from "@/lib/status";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// ISR: render once per hash, then serve from cache and revalidate in the
+// background. The expensive on-chain crawl is itself cached in registry.server,
+// so a cold render here usually reuses a warm crawl from the registry page.
+export const revalidate = 30;
 
 export default async function SkillPage({ params }: { params: Promise<{ hash: string }> }) {
   const { hash } = await params;
@@ -26,7 +30,7 @@ export default async function SkillPage({ params }: { params: Promise<{ hash: st
 
       <div className="flex items-center justify-between gap-3">
         <EnsName name={record.name} className="text-xl font-semibold" />
-        <Badge variant={statusVariant(status)}>{status}</Badge>
+        <Badge variant={statusVariant(status)}>{statusMeta(status).label}</Badge>
       </div>
 
       <Card>
@@ -40,6 +44,28 @@ export default async function SkillPage({ params }: { params: Promise<{ hash: st
           <Field label="content uri" value={record.contentUri ?? "—"} />
         </CardContent>
       </Card>
+
+      {record.metadata && Object.keys(record.metadata).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Metadata</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <table className="w-full text-sm">
+              <tbody>
+                {Object.entries(record.metadata).map(([k, v]) => (
+                  <tr key={k} className="border-b border-[#f5f4f1] last:border-0">
+                    <td className="w-40 py-2 pr-3 align-top font-mono text-xs text-muted-foreground">
+                      {k}
+                    </td>
+                    <td className="py-2 align-top">{Array.isArray(v) ? v.join(", ") : String(v)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

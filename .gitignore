@@ -31,3 +31,6 @@ npm-debug.log*
 
 # safeskill default install dir (runtime artifact from `use` without --claude)
 .skills/
+
+# firecrawl scratch output
+.firecrawl/

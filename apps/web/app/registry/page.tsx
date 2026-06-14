@@ -3,6 +3,8 @@ import Link from "next/link";
 import type { Attestation } from "@aegis/core";
 import { getRegistry, type RegistryEntry } from "@/lib/registry.server";
 import { EnsName } from "@/components/ens-name";
+import { statusMeta } from "@/lib/status";
+import { CARD_TINTS } from "@/lib/card-tints";
 
 export const runtime = "nodejs";
 // ISR: re-scan the chain at most every 30s (a new skill appears within that
@@ -14,13 +16,6 @@ export const metadata: Metadata = {
   title: "Registry — Aegis",
   description:
     "Browse every agent skill on the Aegis ENS registry — its ENS record and the safety scores from each attestation provider.",
-};
-
-const STATUS: Record<string, { label: string; cls: string }> = {
-  verified: { label: "✓ verified", cls: "bg-[#f3fbf7] text-accent" },
-  poisoned: { label: "✗ tampered", cls: "bg-[#fef5f5] text-[#dc2626]" },
-  pending: { label: "• pending", cls: "bg-[#faf9f7] text-[#78716c]" },
-  revoked: { label: "⚠ revoked", cls: "bg-[#fffaf0] text-[#d97706]" },
 };
 
 export default async function RegistryPage() {
@@ -46,19 +41,9 @@ export default async function RegistryPage() {
   );
 }
 
-// Soft pastel palette — each card rotates through these.
-const CARD_TINTS = [
-  { bg: "bg-[#eafaf2]", border: "border-[#c3ecd7]", hoverBorder: "hover:border-[#a9e3c5]", hoverBg: "hover:bg-[#e0f6ea]" }, // mint green
-  { bg: "bg-[#fdeef4]", border: "border-[#f6cfdf]", hoverBorder: "hover:border-[#f0bad1]", hoverBg: "hover:bg-[#fbe4ee]" }, // light pink
-  { bg: "bg-[#eaf3fd]", border: "border-[#c5dcf5]", hoverBorder: "hover:border-[#aacef0]", hoverBg: "hover:bg-[#e0ecfb]" }, // light blue
-  { bg: "bg-[#fff6e6]", border: "border-[#f6e3bd]", hoverBorder: "hover:border-[#f0d8a3]", hoverBg: "hover:bg-[#fdefd6]" }, // light amber
-  { bg: "bg-[#f2edfc]", border: "border-[#d9cdf3]", hoverBorder: "hover:border-[#cabaee]", hoverBg: "hover:bg-[#eae1fa]" }, // light lavender
-  { bg: "bg-[#e7f8f8]", border: "border-[#bfe9e9]", hoverBorder: "hover:border-[#a5e0e0]", hoverBg: "hover:bg-[#dbf3f3]" }, // light teal
-];
-
 function SkillCard({ entry, i }: { entry: RegistryEntry; i: number }) {
   const { record, title, description, status } = entry;
-  const badge = STATUS[status] ?? { label: status, cls: "bg-[#faf9f7] text-[#78716c]" };
+  const meta = statusMeta(status);
   const tint = CARD_TINTS[i % CARD_TINTS.length]!;
   const attestations = record.attestations ?? [];
 
@@ -72,8 +57,8 @@ function SkillCard({ entry, i }: { entry: RegistryEntry; i: number }) {
           <h2 className="text-lg font-semibold tracking-[-0.01em]">{title}</h2>
           <EnsName name={record.name} className="mt-0.5 text-xs text-[#78716c]" />
         </div>
-        <span className={`shrink-0 rounded-none px-2.5 py-0.5 text-[13px] font-medium ${badge.cls}`}>
-          {badge.label}
+        <span className={`shrink-0 rounded-none px-2.5 py-0.5 text-[13px] font-medium ${meta.tint} ${meta.text}`}>
+          {meta.glyph} {meta.label}
         </span>
       </div>
 

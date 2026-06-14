@@ -5,18 +5,21 @@ import { defineConfig } from "tsup";
 // only the real npm deps (commander, picocolors, viem) installed.
 const noExternal = [/^@aegis\//, /^@noble\//];
 
-// Keep the Ledger transport (and its native node-hid/usb addons) OUT of the
-// bundle. node-hid is CommonJS and does require("os")/native binding loads that
-// esbuild's ESM shim turns into "Dynamic require of X is not supported" at
-// runtime. Marked external, the LedgerSigner's dynamic import() resolves them
-// from node_modules as real modules. They're listed in this package's deps so
-// the bundled CLI can resolve them at runtime.
-const external = [
-  "@ledgerhq/hw-app-eth",
+// Keep the Ledger stack OUT of the bundle: @aegis/chain dynamically imports it
+// only in `--ledger` mode, and it drags in native node-hid/usb bindings that
+// can't (and shouldn't) be bundled. Set directly on esbuild so it applies even
+// to the dynamic import inside a noExternal-bundled dep. Resolved from
+// node_modules at runtime when a device is used; `--local` never loads them.
+const ledgerExternal = [
   "@ledgerhq/hw-transport-node-hid",
+  "@ledgerhq/hw-app-eth",
   "node-hid",
   "usb",
 ];
+
+function externalizeLedger(options: { external?: string[] }): void {
+  options.external = [...(options.external ?? []), ...ledgerExternal];
+}
 
 export default defineConfig([
   // The SDK library — imported by an agent / app code.
@@ -28,7 +31,7 @@ export default defineConfig([
     sourcemap: true,
     target: "es2022",
     noExternal,
-    external,
+    esbuildOptions: externalizeLedger,
   },
   // The CLI — `safeskill ...`. Same code, just gets a shebang.
   {
@@ -40,5 +43,6 @@ export default defineConfig([
     target: "es2022",
     banner: { js: "#!/usr/bin/env node" },
     noExternal,
+    esbuildOptions: externalizeLedger,
   },
 ]);

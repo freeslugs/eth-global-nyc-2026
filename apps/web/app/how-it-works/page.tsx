@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CARD_TINTS } from "@/lib/card-tints";
 
 export const metadata: Metadata = {
   title: "How it works — Aegis",
@@ -38,18 +39,26 @@ const STAGES = [
   },
 ];
 
-function PipelineCard({ title, sub, tone }: { title: string; sub: string; tone: string }) {
-  const border =
-    tone === "accent"
-      ? "border-accent bg-[#f3fbf7]"
-      : tone === "ink"
-        ? "border-ink"
-        : "border-[#e7e5e1]";
+function PipelineCard({
+  title,
+  sub,
+  tone,
+  i,
+}: {
+  title: string;
+  sub: string;
+  tone: string;
+  i: number;
+}) {
+  // The ENS-verified endpoint stays green (it's the payoff); every other stage
+  // rotates through the shared pastel palette so the pipeline reads colorful.
+  const tint = CARD_TINTS[i % CARD_TINTS.length]!;
+  const cls = tone === "accent" ? "border-accent bg-[#f3fbf7]" : `${tint.bg} ${tint.border}`;
   const titleColor = tone === "accent" ? "text-accent" : "";
   return (
-    <div className={`min-w-[140px] rounded-xl border px-4 py-5 ${border}`}>
+    <div className={`min-w-[140px] rounded-xl border px-4 py-5 ${cls}`}>
       <div className={`text-[15px] font-semibold ${titleColor}`}>{title}</div>
-      <div className="mt-0.5 text-[13px] text-[#a8a29e]">{sub}</div>
+      <div className="mt-0.5 text-[13px] text-[#78716c]">{sub}</div>
     </div>
   );
 }
@@ -73,7 +82,7 @@ export default function HowItWorksPage() {
         <div className="mt-12 flex items-center justify-center gap-0 overflow-x-auto pb-2">
           {PIPELINE.map((p, i) => (
             <div key={p.title} className="flex items-center">
-              <PipelineCard {...p} />
+              <PipelineCard {...p} i={i} />
               {i < PIPELINE.length - 1 && <span className="px-3 text-xl text-[#d6d3ce]">→</span>}
             </div>
           ))}

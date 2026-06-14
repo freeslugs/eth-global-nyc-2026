@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getOrgs, type OrgEntry } from "@/lib/registry.server";
 import { EnsName } from "@/components/ens-name";
+import { CARD_TINTS } from "@/lib/card-tints";
 
 export const runtime = "nodejs";
 // ISR: re-scan the chain at most every 30s instead of per request — see /registry.
 export const revalidate = 30;
 
 export const metadata: Metadata = {
-  title: "Companies — Aegis",
+  title: "Organizations — Aegis",
   description: "The organizations on the Aegis ENS registry — each owns its subname and the skills under it.",
 };
 
@@ -18,11 +19,11 @@ export default async function OrgsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-6 py-12">
       <header className="space-y-2">
-        <div className="text-[13px] uppercase tracking-[0.04em] text-black">The registry</div>
-        <h1 className="font-display text-4xl font-semibold tracking-[-0.02em] text-black">Companies</h1>
-        <p className="max-w-2xl text-black">
-          Each company owns its own ENS subname and the skills published under it. {orgs.length}{" "}
-          {orgs.length === 1 ? "company" : "companies"} on the registry.
+        <div className="text-[13px] uppercase tracking-[0.04em] text-accent">The registry</div>
+        <h1 className="font-display text-4xl font-semibold tracking-[-0.02em]">Organizations</h1>
+        <p className="max-w-2xl text-[#57534e]">
+          Each organization owns its own ENS subname and the skills published under it. {orgs.length}{" "}
+          {orgs.length === 1 ? "organization" : "organizations"} on the registry.
         </p>
       </header>
 
@@ -34,16 +35,6 @@ export default async function OrgsPage() {
     </div>
   );
 }
-
-// Soft pastel palette — matches the skill registry cards.
-const CARD_TINTS = [
-  { bg: "bg-[#eafaf2]", hoverBg: "hover:bg-[#e0f6ea]" }, // mint green
-  { bg: "bg-[#fdeef4]", hoverBg: "hover:bg-[#fbe4ee]" }, // light pink
-  { bg: "bg-[#eaf3fd]", hoverBg: "hover:bg-[#e0ecfb]" }, // light blue
-  { bg: "bg-[#fff6e6]", hoverBg: "hover:bg-[#fdefd6]" }, // light amber
-  { bg: "bg-[#f2edfc]", hoverBg: "hover:bg-[#eae1fa]" }, // light lavender
-  { bg: "bg-[#e7f8f8]", hoverBg: "hover:bg-[#dbf3f3]" }, // light teal
-];
 
 function OrgCard({ org, i }: { org: OrgEntry; i: number }) {
   const tint = CARD_TINTS[i % CARD_TINTS.length]!;

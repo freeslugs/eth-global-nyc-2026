@@ -28,7 +28,6 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\""
   },
   "devDependencies": {
-    "@aegis/cli": "workspace:*",
     "@aegis/eslint-config": "workspace:*",
     "@aegis/tsconfig": "workspace:*",
     "next": "^15.1.4",

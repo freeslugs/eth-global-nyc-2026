@@ -2,7 +2,9 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: "class",
-  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
+  // ./lib is included so arbitrary-value classes defined there (e.g. the pastel
+  // CARD_TINTS) are scanned and generated — otherwise those cards render white.
+  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
@@ -34,7 +36,7 @@ const config: Config = {
       },
       fontFamily: {
         display: ["var(--font-display)", "Space Grotesk", "sans-serif"],
-        sans: ["var(--font-sans)", "IBM Plex Sans", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "IBM Plex Mono", "ui-monospace", "monospace"],
       },
     },

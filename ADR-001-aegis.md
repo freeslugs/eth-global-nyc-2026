@@ -67,7 +67,7 @@ Keep all ENS specifics behind the `SkillResolver` / `VerdictWriter` ports (§4) 
 ## 4. Architecture: ports & adapters
 
 ```
-        apps (web · cli · cre-workflow)
+        apps (web · cre-workflow)  ·  packages/safeskill (CLI)
                     │ depend on
                     ▼
   @safeskills/core ─► PORTS (interfaces) + gate() engine   ← pure, unit-tested, no I/O
@@ -324,9 +324,12 @@ Vercel: project root `apps/web`, build `turbo build --filter=web`.
 
 ---
 
-## 10. `apps/cli` — `safeskills` (consumer + Ledger gate)
+## 10. `packages/safeskill` — `safeskill` (consumer + Ledger gate)
 
-Node CLI via `tsup`, wired to `buildAdapters()`.
+> Realized as **`packages/safeskill`** (the standalone `safeskill` CLI); the original
+> `apps/cli` sketch below was superseded and removed. `check` stayed; `install` became `use`.
+
+Node CLI via `tsup`, resolving the verdict + re-hashing the file itself (standalone, no `buildAdapters()`).
 
 - `safeskills check <name>` — resolve → fetch SKILL.md → `hashSkill` → `gate()` with `authorized:false`; print the verdict + what the gate says (no install).
 - `safeskills install <name>` — same, then if the gate passes everything *except* authorization, build the `AuthRequest`, call `signer.authorize()` (**real Ledger** — device shows name + verdict), `signer.verify()`, set `authorized`, re-run `gate()`. ALLOW → write the skill to the install dir. BLOCK → print reason, exit 1.
@@ -351,7 +354,7 @@ Optional seam: expose `check`/`install` as an MCP tool so an agent calls Safe Sk
 1. Repo skeleton: pnpm workspace, `turbo.json`, `tooling/*`, `.nvmrc`, `.env.example`.
 2. `@safeskills/core`: types → ports → `hashSkill` → `gate()` → write the **contract-test suite for every port** (they compile now, run against mocks next) → `gate()` unit tests green.
 3. `@safeskills/adapters`: write **all six mocks**; each passes its contract test. Real adapters are empty classes throwing `NotImplemented`. `factory.ts` defaults to mocks.
-4. `apps/cli`: `check` / `install` / `--no-ledger` on mocks. **Full offline demo works here.**
+4. `packages/safeskill`: `check` / `use` / Ledger override on the demo registry. **Full offline demo works here.**
 5. `apps/cre-workflow`: orchestration wired against the mock `Watcher`/`Fetcher`/`Review`/`VerdictWriter`; the submit→consume loop passes offline.
 6. `apps/web`: explorer + `/submit` + `/skill` against the mock store.
 

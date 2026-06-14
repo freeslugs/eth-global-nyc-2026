@@ -29,7 +29,7 @@ test passes before a single real integration exists (the fallback demo).
 | **Contracts** | — | `packages/contracts/` | deploy `SubmissionRegistry` to Sepolia | `forge test` |
 | **Engine** | all ports + `gate()` | `packages/core/` | (pure; no I/O) | `gate.test`, `hash.test` |
 | **Web** | consumes adapters | `apps/web/` | explorer + `/verify` + `/submit` | — |
-| **CLI** | consumes adapters | `apps/cli/` | `check` / `install` / `--no-ledger` | smoke |
+| **CLI** | standalone gate | `packages/safeskill/` | `check` / `use` / Ledger override | `safeskill.test` |
 
 > The CRE workflow and the CLI/web are **orchestrators, not integrations** — they
 > only compose ports. All I/O lives in adapters, so "get a score" (`ReviewClient`)
@@ -52,7 +52,7 @@ test passes before a single real integration exists (the fallback demo).
 There is exactly **one hosted web app**: `apps/web` (Next.js → Vercel). Its API
 lives entirely in route handlers (`apps/web/app/api/*`) — there is no separate
 standalone API service. `apps/cre-workflow` is a Chainlink CRE workflow
-(deployed to the DON) / a local runner, and `apps/cli` runs on the user's
+(deployed to the DON) / a local runner, and `packages/safeskill` runs on the user's
 machine (the Ledger needs a device) — neither is hosted alongside the web app.
 
 ## Source of truth
