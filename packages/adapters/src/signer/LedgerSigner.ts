@@ -1,9 +1,18 @@
 import type { InstallSigner, AuthRequest, Hex } from "@aegis/core";
+import { createRequire } from "node:module";
 import {
   encodeAbiParameters,
   keccak256,
   encodePacked,
 } from "viem";
+
+// @ledgerhq/errors ships a broken native-ESM build: its lib-es/index.js uses
+// extensionless relative imports (`from "./helpers"`) that Node's ESM loader
+// rejects. Loading the transport chain through CommonJS require() makes Node
+// follow the working `require` condition (lib/) for every @ledgerhq package.
+// import.meta.url anchors resolution at the installed package so these external
+// deps load from node_modules at runtime.
+const nodeRequire = createRequire(import.meta.url);
 import {
   verifyAuth,
   EIP712_DOMAIN,
@@ -113,10 +122,10 @@ export class LedgerSigner implements InstallSigner {
   }
 
   private async getEthApp() {
-    const { default: TransportNodeHid } = await import(
-      "@ledgerhq/hw-transport-node-hid"
-    );
-    const { default: Eth } = await import("@ledgerhq/hw-app-eth");
+    const TransportNodeHid = nodeRequire(
+      "@ledgerhq/hw-transport-node-hid",
+    ).default;
+    const Eth = nodeRequire("@ledgerhq/hw-app-eth").default;
     const transport = await TransportNodeHid.create();
     return { eth: new Eth(transport), transport };
   }
