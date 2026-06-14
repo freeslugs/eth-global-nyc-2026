@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Aegis Workspace Paths",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "paths": {
+      "@aegis/adapters": ["packages/adapters/src/index.ts"],
+      "@aegis/chain": ["packages/chain/src/index.ts"],
+      "@aegis/core": ["packages/core/src/index.ts"],
+      "@aegis/core/errors": ["packages/core/src/errors.ts"],
+      "@aegis/core/testing": ["packages/core/testing/index.ts"],
+      "@aegis/safeskill": ["packages/safeskill/src/index.ts"]
+    }
+  }
+}

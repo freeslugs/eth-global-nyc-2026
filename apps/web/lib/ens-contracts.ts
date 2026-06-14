@@ -25,8 +25,7 @@ export const ORG_REGISTRY = (process.env.NEXT_PUBLIC_ORG_REGISTRY ?? "") as Addr
 export const MAX_EXPIRY = (1n << 64n) - 1n;
 
 /** EACBaseRolesLib.ALL_ROLES — full control of the name/registry/resolver. */
-export const ALL_ROLES =
-  0x1111111111111111111111111111111111111111111111111111111111111111n;
+export const ALL_ROLES = 0x1111111111111111111111111111111111111111111111111111111111111111n;
 
 /** PermissionedRegistry: register subnames + look up a subname's subregistry/resolver. */
 export const permissionedRegistryAbi = [
@@ -72,8 +71,7 @@ export const permissionedRegistryAbi = [
  * with its low 32 bits (the token-version field) cleared. `ownerOf(tokenId)`
  * takes this; `getSubregistry(label)`/`getResolver(label)` take the raw label.
  */
-export const companyTokenId = (label: string): bigint =>
-  BigInt(labelhash(label)) & ~0xffffffffn;
+export const companyTokenId = (label: string): bigint => BigInt(labelhash(label)) & ~0xffffffffn;
 
 /**
  * PermissionedResolver — write the skill's records. `setText` writes one record;
@@ -122,6 +120,51 @@ export const verifiableFactoryAbi = [
       { name: "proxyAddress", type: "address", indexed: true },
       { name: "salt", type: "uint256", indexed: false },
       { name: "implementation", type: "address", indexed: false },
+    ],
+  },
+] as const;
+
+/**
+ * SkillAttestations — append-only CRE attestation store keyed by ENS namehash.
+ * Deploy address stored in NEXT_PUBLIC_SKILL_ATTESTATIONS env var.
+ */
+export const SKILL_ATTESTATIONS = (process.env.NEXT_PUBLIC_SKILL_ATTESTATIONS ?? "") as
+  | Address
+  | "";
+
+export const skillAttestationsAbi = [
+  {
+    name: "getAttestations",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "node", type: "bytes32" }],
+    outputs: [
+      {
+        type: "tuple[]",
+        components: [
+          { name: "statusCode", type: "uint8" },
+          { name: "riskScore", type: "uint8" },
+          { name: "inferenceId", type: "string" },
+          { name: "timestamp", type: "uint64" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "attestationCount",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "node", type: "bytes32" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    name: "SkillAttested",
+    type: "event",
+    inputs: [
+      { name: "node", type: "bytes32", indexed: true },
+      { name: "statusCode", type: "uint8", indexed: true },
+      { name: "riskScore", type: "uint8", indexed: false },
+      { name: "inferenceId", type: "string", indexed: false },
     ],
   },
 ] as const;

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Aegis Workspace Package Resolution",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "paths": {
+      "@aegis/adapters": ["packages/adapters/dist/index.d.ts"],
+      "@aegis/chain": ["packages/chain/dist/index.d.ts"],
+      "@aegis/core": ["packages/core/dist/index.d.ts"],
+      "@aegis/core/errors": ["packages/core/dist/errors.d.ts"],
+      "@aegis/core/testing": ["packages/core/dist/testing/index.d.ts"],
+      "@aegis/safeskill": ["packages/safeskill/dist/index.d.ts"]
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Aegis IDE (source navigation)",
+  "extends": "./workspace-paths.json",
+  "compilerOptions": {
+    "customConditions": ["development"]
+  }
+}

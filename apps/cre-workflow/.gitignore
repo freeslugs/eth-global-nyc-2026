@@ -1,0 +1,7 @@
+.env
+*.wasm
+aegis-review/node_modules/
+aegis-review/dist/
+secrets.yaml
+node_modules/
+aegis-review/.cre_build_tmp.js
