@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
@@ -338,7 +338,11 @@ program
     // The gate command the meta-skill tells the agent to run = however THIS CLI
     // was invoked. Run `init` from a persistent install (repo build or a global
     // bin), not an ephemeral `npx` temp dir, so the path stays valid.
-    const gate = `node ${fileURLToPath(import.meta.url)}`;
+    const cliPath = fileURLToPath(import.meta.url);
+    // TODO(contenturi): bake the temporary demo content dir into the gate command so
+    // check/use resolve a candidate without --file until contentUri is pinned on-chain.
+    const demoContent = join(dirname(cliPath), "..", "demo-content");
+    const gate = `AEGIS_CONTENT_DIR='${demoContent}' node '${cliPath}'`;
     const content = metaSkill(gate);
 
     if (opts.print) {

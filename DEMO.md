@@ -144,3 +144,15 @@ Current demo pins (Sepolia):
 - `weather.acme.safeskills.eth` → `sha256:bab8fb6e…` = `clean.md`  ✅
 - `exfil.acme.safeskills.eth`   → `sha256:d186df88…` = `poisoned.md`  ✅
 - TODO: add the rest as you pin them.
+
+### TODO(contenturi): temporary content fallback
+
+The ENS records pin a **hash** but not yet a **content location** (no IPFS /
+contenthash), so the gate has no bytes to re-hash unless you pass `--file`. As a
+**temporary** unblock, the gate reads `$AEGIS_CONTENT_DIR/<label>.md` when a record
+has no `contentUri` and no `--file` is given. `init` bakes
+`AEGIS_CONTENT_DIR=packages/safeskill/demo-content` into the gate command, so
+`check`/`use` work without `--file` (e.g. `check weather…` → `demo-content/weather.md`).
+The integrity check is still real — those files are byte-identical to the pinned
+fixtures. **Remove this fallback once publishers pin a real `contentUri`/IPFS hash**
+(search `TODO(contenturi)` in `packages/safeskill/src`).

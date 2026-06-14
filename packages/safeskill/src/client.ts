@@ -239,7 +239,20 @@ export class Safeskill {
   /** Candidate bytes to gate: a local file if given, else the record's contentUri. */
   private async loadBytes(record: SkillRecord, file?: string): Promise<Uint8Array> {
     if (file) return new Uint8Array(await readFile(file));
-    return this.fetch(record);
+    if (record.contentUri) return this.fetch(record);
+    // TODO(contenturi): the on-chain record has no content location yet (publishers
+    // haven't pinned a contentUri / IPFS hash). TEMPORARY demo fallback — resolve
+    // <AEGIS_CONTENT_DIR>/<label>.md so `check`/`use` work without --file. The gate
+    // still re-hashes these bytes against the on-chain pin, so the integrity check is
+    // real. Remove this branch once contentUri is pinned on the ENS records.
+    const dir = process.env.AEGIS_CONTENT_DIR;
+    if (dir) {
+      const label = record.name.split(".")[0] || record.name;
+      return new Uint8Array(await readFile(join(dir, `${label}.md`)));
+    }
+    throw new Error(
+      `no contentUri for ${record.name} — pass --file <path>, or set AEGIS_CONTENT_DIR (temporary demo fallback)`,
+    );
   }
 
   /** Build the message the human signs to authorize an override. */
