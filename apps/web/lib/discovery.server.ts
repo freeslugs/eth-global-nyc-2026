@@ -24,12 +24,19 @@ const REGISTER_EVENT =
 
 /** Public RPCs cap eth_getLogs at a 50k block span — scan in chunks. */
 const CHUNK = 50_000n;
-/** How far back to look. Override per-deploy with AEGIS_DISCOVERY_LOOKBACK. */
-const LOOKBACK = BigInt(process.env.AEGIS_DISCOVERY_LOOKBACK ?? "400000");
-/** Optional exact start block (the registry's deploy block) — beats LOOKBACK. */
-const FROM_BLOCK = process.env.AEGIS_DISCOVERY_FROM_BLOCK
-  ? BigInt(process.env.AEGIS_DISCOVERY_FROM_BLOCK)
-  : undefined;
+/**
+ * The block we start scanning from. We deliberately anchor to a fixed floor
+ * rather than a sliding `latest - LOOKBACK` window: a sliding window ages skills
+ * out of view once their register event is older than the window (~55 days at
+ * 400k Sepolia blocks), silently dropping them from the registry. A fixed floor
+ * never does that, and since redeploys only ever land at higher blocks, a floor
+ * comfortably below the current deploy stays correct across redeploys.
+ *
+ * The Safe Skills registries were deployed around block 11.05M on Sepolia, so
+ * 11.0M is a safe floor. Override per-deploy with AEGIS_DISCOVERY_FROM_BLOCK
+ * (e.g. set it to the exact deploy block to keep the scan minimal long-term).
+ */
+const FROM_BLOCK = BigInt(process.env.AEGIS_DISCOVERY_FROM_BLOCK ?? "11000000");
 
 const getSubregistryAbi = [
   {
@@ -78,14 +85,28 @@ function client() {
   return createPublicClient({ chain: sepolia, transport: http(process.env.AEGIS_RPC_URL) });
 }
 
-/** The register labels minted on a registry, recovered from the register event. */
-async function labelsOf(c: ReturnType<typeof client>, registry: Address): Promise<string[]> {
-  const latest = await c.getBlockNumber();
-  const from = FROM_BLOCK ?? (latest > LOOKBACK ? latest - LOOKBACK : 0n);
+/**
+ * The register labels minted on a registry, recovered from the register event.
+ * Scans `[FROM_BLOCK, latest]` in 50k chunks run CONCURRENTLY — the chunks are
+ * independent, so there's no reason to await them one at a time. Caller passes
+ * `latest` so we fetch the block number once for the whole crawl, not per scan.
+ */
+async function labelsOf(
+  c: ReturnType<typeof client>,
+  registry: Address,
+  latest: bigint,
+): Promise<string[]> {
+  const from = FROM_BLOCK > latest ? latest : FROM_BLOCK;
+  const ranges: Array<[bigint, bigint]> = [];
+  for (let lo = from; lo <= latest; lo += CHUNK) {
+    const hi = lo + CHUNK - 1n > latest ? latest : lo + CHUNK - 1n;
+    ranges.push([lo, hi]);
+  }
+  const chunks = await Promise.all(
+    ranges.map(([lo, hi]) => c.getLogs({ address: registry, fromBlock: lo, toBlock: hi })),
+  );
   const labels = new Set<string>();
-  for (let to = latest; to >= from; to -= CHUNK) {
-    const lo = to - CHUNK + 1n > from ? to - CHUNK + 1n : from;
-    const logs = await c.getLogs({ address: registry, fromBlock: lo, toBlock: to });
+  for (const logs of chunks) {
     for (const log of logs) {
       if (log.topics[0] !== REGISTER_EVENT) continue;
       try {
@@ -95,7 +116,6 @@ async function labelsOf(c: ReturnType<typeof client>, registry: Address): Promis
         // not the layout we expect — skip
       }
     }
-    if (lo === from) break;
   }
   return [...labels];
 }
@@ -114,41 +134,46 @@ export async function discover(): Promise<Discovered> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.value;
 
   const c = client();
-  const companyLabels = await labelsOf(c, ORG_REGISTRY);
+  const latest = await c.getBlockNumber();
+  const companyLabels = await labelsOf(c, ORG_REGISTRY, latest);
 
-  const orgs: DiscoveredOrg[] = [];
+  // Walk every company CONCURRENTLY — each company's subregistry lookup, skill
+  // scan, and per-skill ownerOf reads are independent of the others.
   const ownerByName: Record<string, Address> = {};
-  for (const label of companyLabels) {
-    const subregistry = (await c.readContract({
-      address: ORG_REGISTRY,
-      abi: getSubregistryAbi,
-      functionName: "getSubregistry",
-      args: [label],
-    })) as Address;
-    if (!subregistry || subregistry === ZERO) continue;
-    const name = `${label}.${ROOT}`;
-    const skillLabels = await labelsOf(c, subregistry);
-    orgs.push({ label, name, subregistry, skillNames: skillLabels.map((s) => `${s}.${name}`) });
+  const settled = await Promise.all(
+    companyLabels.map(async (label): Promise<DiscoveredOrg | null> => {
+      const subregistry = (await c.readContract({
+        address: ORG_REGISTRY,
+        abi: getSubregistryAbi,
+        functionName: "getSubregistry",
+        args: [label],
+      })) as Address;
+      if (!subregistry || subregistry === ZERO) return null;
+      const name = `${label}.${ROOT}`;
+      const skillLabels = await labelsOf(c, subregistry, latest);
 
-    // The skill's real owner is its registry token owner (we never set an addr
-    // record), so read ownerOf for each. Tolerant: a token that doesn't resolve
-    // just has no owner entry.
-    await Promise.all(
-      skillLabels.map(async (s) => {
-        try {
-          const owner = (await c.readContract({
-            address: subregistry,
-            abi: getSubregistryAbi,
-            functionName: "ownerOf",
-            args: [tokenId(s)],
-          })) as Address;
-          if (owner && owner !== ZERO) ownerByName[`${s}.${name}`] = owner;
-        } catch {
-          // token not found / not enumerable — skip
-        }
-      }),
-    );
-  }
+      // The skill's real owner is its registry token owner (we never set an addr
+      // record), so read ownerOf for each. Tolerant: a token that doesn't resolve
+      // just has no owner entry.
+      await Promise.all(
+        skillLabels.map(async (s) => {
+          try {
+            const owner = (await c.readContract({
+              address: subregistry,
+              abi: getSubregistryAbi,
+              functionName: "ownerOf",
+              args: [tokenId(s)],
+            })) as Address;
+            if (owner && owner !== ZERO) ownerByName[`${s}.${name}`] = owner;
+          } catch {
+            // token not found / not enumerable — skip
+          }
+        }),
+      );
+      return { label, name, subregistry, skillNames: skillLabels.map((s) => `${s}.${name}`) };
+    }),
+  );
+  const orgs = settled.filter((o): o is DiscoveredOrg => o !== null);
 
   const value: Discovered = { orgs, skillNames: orgs.flatMap((o) => o.skillNames), ownerByName };
   cache = { at: Date.now(), value };

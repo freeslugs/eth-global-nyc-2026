@@ -34,7 +34,7 @@ const config: Config = {
       },
       fontFamily: {
         display: ["var(--font-display)", "Space Grotesk", "sans-serif"],
-        sans: ["var(--font-sans)", "IBM Plex Sans", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "IBM Plex Mono", "ui-monospace", "monospace"],
       },
     },
