@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { Space_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -36,8 +37,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <header className="sticky top-0 z-50 border-b border-[#e7e5e1] bg-white/90 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center gap-5 px-6 py-4">
-              <Link href="/" className="font-display text-xl font-bold tracking-tight">
-                ◇ Aegis
+              <Link href="/" className="flex items-center gap-2 font-display text-xl font-bold tracking-tight">
+                <Image
+                  src="/logo.jpeg"
+                  alt="Aegis"
+                  width={28}
+                  height={28}
+                  className="rounded-md"
+                  priority
+                />
+                Aegis
               </Link>
               <DesktopNav />
               <div className="ml-auto flex items-center gap-2 md:ml-0">
@@ -57,7 +66,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <footer className="border-t border-[#e7e5e1] bg-white">
             <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-[#78716c] sm:flex-row">
-              <span className="font-display font-bold text-ink">◇ Aegis</span>
+              <span className="flex items-center gap-2 font-display font-bold text-ink">
+                <Image src="/logo.jpeg" alt="Aegis" width={22} height={22} className="rounded" />
+                Aegis
+              </span>
               <span>Name on ENS · Attest via Chainlink CRE · Gate on Ledger · Verify before run</span>
               <span>ETHGlobal NYC 2026</span>
             </div>
