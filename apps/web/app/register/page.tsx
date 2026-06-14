@@ -3,28 +3,53 @@
 import { useEffect, useRef, useState } from "react";
 import {
   useAccount,
+  useReadContract,
   useSwitchChain,
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
 import { sepolia } from "wagmi/chains";
-import { zeroAddress } from "viem";
-import { namehash } from "viem/ens";
+import { decodeEventLog, encodeFunctionData, type Address, type Hex } from "viem";
+import { labelhash, namehash } from "viem/ens";
 import { ConnectButton } from "@/components/connect-button";
 import {
   ALL_ROLES,
-  COMPANY,
-  COMPANY_REGISTRY,
-  ENS_RESOLVER,
   MAX_EXPIRY,
   ORG_REGISTRY,
-  PUBLIC_RESOLVER,
+  PERMISSIONED_RESOLVER_IMPL,
+  USER_REGISTRY_IMPL,
+  VERIFIABLE_FACTORY,
   permissionedRegistryAbi,
   permissionedResolverAbi,
+  proxyInitializeAbi,
+  verifiableFactoryAbi,
 } from "@/lib/ens-contracts";
 
 const ROOT = "safeskills.eth";
+const ZERO = "0x0000000000000000000000000000000000000000";
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "");
+
+type Log = { data: Hex; topics: readonly Hex[] };
+
+/** Pull the new proxy address out of a VerifiableFactory.deployProxy receipt. */
+function proxyFrom(logs: readonly Log[]): Address {
+  for (const log of logs) {
+    try {
+      const ev = decodeEventLog({
+        abi: verifiableFactoryAbi,
+        data: log.data,
+        topics: log.topics as [Hex, ...Hex[]],
+      });
+      if (ev.eventName === "ProxyDeployed") return (ev.args as { proxyAddress: Address }).proxyAddress;
+    } catch {
+      /* not our event */
+    }
+  }
+  throw new Error("ProxyDeployed event not found in receipt");
+}
+
+const initData = (owner: Address): Hex =>
+  encodeFunctionData({ abi: proxyInitializeAbi, functionName: "initialize", args: [owner, ALL_ROLES] });
 
 export default function RegisterPage() {
   const [mounted, setMounted] = useState(false);
@@ -34,9 +59,7 @@ export default function RegisterPage() {
     <div className="mx-auto max-w-3xl space-y-8 px-6 py-12">
       <header className="space-y-2">
         <div className="text-[13px] uppercase tracking-[0.04em] text-accent">Submit a skill</div>
-        <h1 className="font-display text-4xl font-semibold tracking-[-0.02em]">
-          Publish your skills
-        </h1>
+        <h1 className="font-display text-4xl font-semibold tracking-[-0.02em]">Publish your skills</h1>
         <p className="max-w-2xl text-[#57534e]">
           Connect your wallet, claim your company name on ENS, and submit skills for review. Your
           wallet owns the names and pays the gas — no account, no custody.
@@ -55,6 +78,25 @@ export default function RegisterPage() {
 function RegisterBody() {
   const { isConnected, chainId } = useAccount();
   const { switchChain, isPending: switching } = useSwitchChain();
+  const [companyLabel, setCompanyLabel] = useState("");
+  const company = slug(companyLabel);
+
+  // Look up the company's subregistry + resolver on-chain — the single source of
+  // truth for "does this company exist and where do its skills live".
+  const orgArgs = { address: (ORG_REGISTRY || undefined) as Address | undefined, abi: permissionedRegistryAbi } as const;
+  const enabled = Boolean(company && ORG_REGISTRY);
+  const { data: subregistry, refetch: refetchSub } = useReadContract({
+    ...orgArgs,
+    functionName: "getSubregistry",
+    args: [company],
+    query: { enabled },
+  });
+  const { data: resolver, refetch: refetchRes } = useReadContract({
+    ...orgArgs,
+    functionName: "getResolver",
+    args: [company],
+    query: { enabled },
+  });
 
   if (!isConnected) {
     return (
@@ -78,40 +120,118 @@ function RegisterBody() {
       </div>
     );
   }
+
+  const exists = Boolean(subregistry && subregistry !== ZERO);
+  const refetch = () => {
+    void refetchSub();
+    void refetchRes();
+  };
+
   return (
     <>
-      <CreateOrg />
-      <SubmitSkill />
+      <CompanyPanel
+        label={companyLabel}
+        setLabel={setCompanyLabel}
+        company={company}
+        exists={exists}
+        onCreated={refetch}
+      />
+      <SubmitSkill
+        company={company}
+        exists={exists}
+        registry={subregistry as Address | undefined}
+        resolver={resolver as Address | undefined}
+      />
     </>
   );
 }
 
-function CreateOrg() {
-  const { address } = useAccount();
-  const [label, setLabel] = useState("");
-  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
-  const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+type OrgStep = "idle" | "registry" | "resolver" | "register" | "done";
 
-  const name = label ? `${slug(label)}.${ROOT}` : `your-company.${ROOT}`;
-  const ready = Boolean(slug(label) && address && ORG_REGISTRY);
+function CompanyPanel({
+  label,
+  setLabel,
+  company,
+  exists,
+  onCreated,
+}: {
+  label: string;
+  setLabel: (v: string) => void;
+  company: string;
+  exists: boolean;
+  onCreated: () => void;
+}) {
+  const { address } = useAccount();
+  const { writeContract, data: hash, error, reset } = useWriteContract();
+  const { data: receipt, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const processed = useRef<string | undefined>(undefined);
+  const registryRef = useRef<Address | undefined>(undefined);
+  const resolverRef = useRef<Address | undefined>(undefined);
+  const [step, setStep] = useState<OrgStep>("idle");
+
+  const fullName = `${company || "your-company"}.${ROOT}`;
+  const ready = Boolean(company && address && ORG_REGISTRY && !exists);
+
+  // 3-tx flow: deploy the company's subregistry → its resolver → register it.
+  useEffect(() => {
+    if (!isSuccess || !receipt || hash === processed.current) return;
+    processed.current = hash;
+    if (step === "registry") {
+      registryRef.current = proxyFrom(receipt.logs);
+      setStep("resolver");
+      writeContract({
+        address: VERIFIABLE_FACTORY,
+        abi: verifiableFactoryAbi,
+        functionName: "deployProxy",
+        args: [PERMISSIONED_RESOLVER_IMPL, BigInt(labelhash(`${company}:resolver`)), initData(address!)],
+      });
+    } else if (step === "resolver") {
+      resolverRef.current = proxyFrom(receipt.logs);
+      setStep("register");
+      writeContract({
+        address: ORG_REGISTRY as Address,
+        abi: permissionedRegistryAbi,
+        functionName: "register",
+        args: [company, address!, registryRef.current!, resolverRef.current!, ALL_ROLES, MAX_EXPIRY],
+      });
+    } else if (step === "register") {
+      setStep("done");
+      onCreated();
+    }
+  }, [isSuccess, receipt, hash, step, company, address, writeContract, onCreated]);
 
   function create() {
     if (!ready) return;
     reset();
+    processed.current = undefined;
+    registryRef.current = undefined;
+    resolverRef.current = undefined;
+    setStep("registry");
     writeContract({
-      address: ORG_REGISTRY as `0x${string}`,
-      abi: permissionedRegistryAbi,
-      functionName: "register",
-      args: [slug(label), address!, zeroAddress, PUBLIC_RESOLVER, ALL_ROLES, MAX_EXPIRY],
+      address: VERIFIABLE_FACTORY,
+      abi: verifiableFactoryAbi,
+      functionName: "deployProxy",
+      args: [USER_REGISTRY_IMPL, BigInt(labelhash(`${company}:registry`)), initData(address!)],
     });
   }
+
+  const busy = step === "registry" || step === "resolver" || step === "register";
+  const label3 =
+    step === "registry"
+      ? "Deploying registry…"
+      : step === "resolver"
+        ? "Deploying resolver…"
+        : step === "register"
+          ? "Registering company…"
+          : "Create company →";
 
   return (
     <section className="space-y-4 rounded-2xl border border-[#e7e5e1] bg-white p-6">
       <div>
         <h2 className="font-display text-xl font-semibold">1 · Claim your company name</h2>
         <p className="mt-1 text-sm text-[#78716c]">
-          A subname under <span className="font-mono">{ROOT}</span> that your wallet owns.
+          A subname under <span className="font-mono">{ROOT}</span>, with its own subregistry +
+          resolver that your wallet owns.
         </p>
       </div>
 
@@ -125,37 +245,29 @@ function CreateOrg() {
         />
       </label>
 
-      <div className="rounded-md bg-[#faf9f7] px-3 py-2 font-mono text-sm">{name}</div>
+      <div className="rounded-md bg-[#faf9f7] px-3 py-2 font-mono text-sm">{fullName}</div>
 
       {!ORG_REGISTRY && (
         <p className="rounded-md bg-[#fffaf0] px-3 py-2 text-xs text-[#92710a]">
-          Company registry not deployed yet — attach a subregistry to{" "}
-          <span className="font-mono">{ROOT}</span> and set{" "}
-          <span className="font-mono">NEXT_PUBLIC_ORG_REGISTRY</span> to enable on-chain registration.
+          Set <span className="font-mono">NEXT_PUBLIC_ORG_REGISTRY</span> to enable on-chain
+          registration.
         </p>
       )}
 
-      <button
-        disabled={!ready || isPending || confirming}
-        onClick={create}
-        className="rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink/90 disabled:opacity-50"
-      >
-        {isPending ? "Confirm in wallet…" : confirming ? "Registering…" : "Create company →"}
-      </button>
-
-      {isSuccess && (
+      {exists ? (
         <p className="text-sm text-accent">
-          ✓ Registered <span className="font-mono">{name}</span> ·{" "}
-          <a
-            href={`https://sepolia.etherscan.io/tx/${hash}`}
-            target="_blank"
-            rel="noreferrer"
-            className="underline"
-          >
-            view tx
-          </a>
+          ✓ <span className="font-mono">{fullName}</span> exists — submit skills under it below.
         </p>
+      ) : (
+        <button
+          disabled={!ready || busy}
+          onClick={create}
+          className="rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink/90 disabled:opacity-50"
+        >
+          {busy ? label3 : "Create company →"}
+        </button>
       )}
+
       {error && (
         <p className="break-words text-sm text-[#dc2626]">
           {(error as { shortMessage?: string }).shortMessage ?? error.message}
@@ -165,9 +277,19 @@ function CreateOrg() {
   );
 }
 
-type Step = "idle" | "register" | "pin" | "done";
+type SkillStep = "idle" | "register" | "pin" | "done";
 
-function SubmitSkill() {
+function SubmitSkill({
+  company,
+  exists,
+  registry,
+  resolver,
+}: {
+  company: string;
+  exists: boolean;
+  registry: Address | undefined;
+  resolver: Address | undefined;
+}) {
   const { address } = useAccount();
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
@@ -175,35 +297,32 @@ function SubmitSkill() {
   const [bytes, setBytes] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<Step>("idle");
+  const [step, setStep] = useState<SkillStep>("idle");
 
   const { writeContract, data: hash, error: txError, reset } = useWriteContract();
   const { isSuccess: confirmed } = useWaitForTransactionReceipt({ hash });
   const processed = useRef<string | undefined>(undefined);
 
   const validUrl = /^https?:\/\//i.test(url);
-  const fullName = `${slug(label) || "your-skill"}.${COMPANY}.${ROOT}`;
+  const fullName = `${slug(label) || "your-skill"}.${company || "your-company"}.${ROOT}`;
   const node = namehash(fullName);
-  const ready = Boolean(slug(label) && pin && address && COMPANY_REGISTRY && ENS_RESOLVER);
+  const ready = Boolean(slug(label) && pin && address && exists && registry && resolver);
 
-  // Two-step publish: register the subname, then (once it confirms) write the pin.
-  // Each tx hash is processed once so the second step can't fire on the first's
-  // lingering "confirmed" state.
   useEffect(() => {
-    if (!confirmed || !hash || hash === processed.current) return;
+    if (!confirmed || !hash || hash === processed.current || !resolver) return;
     processed.current = hash;
     if (step === "register") {
       setStep("pin");
       writeContract({
-        address: ENS_RESOLVER,
+        address: resolver,
         abi: permissionedResolverAbi,
         functionName: "setText",
-        args: [node as `0x${string}`, "safeskills.pin", pin!],
+        args: [node as Hex, "safeskills.pin", pin!],
       });
     } else if (step === "pin") {
       setStep("done");
     }
-  }, [confirmed, hash, step, node, pin, writeContract]);
+  }, [confirmed, hash, step, node, pin, resolver, writeContract]);
 
   async function computePin() {
     setBusy(true);
@@ -227,15 +346,15 @@ function SubmitSkill() {
   }
 
   function publish() {
-    if (!ready) return;
+    if (!ready || !registry || !resolver) return;
     reset();
     processed.current = undefined;
     setStep("register");
     writeContract({
-      address: COMPANY_REGISTRY as `0x${string}`,
+      address: registry,
       abi: permissionedRegistryAbi,
       functionName: "register",
-      args: [slug(label), address!, zeroAddress, ENS_RESOLVER, ALL_ROLES, MAX_EXPIRY],
+      args: [slug(label), address!, ZERO as Address, resolver, ALL_ROLES, MAX_EXPIRY],
     });
   }
 
@@ -293,10 +412,9 @@ function SubmitSkill() {
       )}
       {error && <p className="text-sm text-[#dc2626]">{error}</p>}
 
-      {!COMPANY_REGISTRY && (
-        <p className="rounded-md bg-[#fffaf0] px-3 py-2 text-xs text-[#92710a]">
-          Set <span className="font-mono">NEXT_PUBLIC_COMPANY_REGISTRY</span> (your company&apos;s
-          subregistry) to enable on-chain publishing.
+      {!exists && (
+        <p className="rounded-md bg-[#faf9f7] px-3 py-2 text-xs text-[#78716c]">
+          Enter (and create) your company above first — skills publish under it.
         </p>
       )}
 
@@ -305,11 +423,7 @@ function SubmitSkill() {
         onClick={publish}
         className="rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink/90 disabled:opacity-50"
       >
-        {step === "register"
-          ? "Registering name…"
-          : step === "pin"
-            ? "Writing pin…"
-            : "Submit skill →"}
+        {step === "register" ? "Registering name…" : step === "pin" ? "Writing pin…" : "Submit skill →"}
       </button>
 
       {step === "done" && (
