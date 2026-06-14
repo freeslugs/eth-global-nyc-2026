@@ -50,14 +50,14 @@ function SkillCard({ entry, i }: { entry: RegistryEntry; i: number }) {
   return (
     <Link
       href={`/a/${encodeURIComponent(record.pin)}`}
-      className={`block rounded-lg border p-5 transition-colors ${tint.bg} ${tint.border} ${tint.hoverBorder} ${tint.hoverBg}`}
+      className={`block border p-5 transition-colors ${tint.bg} ${tint.border} ${tint.hoverBorder} ${tint.hoverBg}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold tracking-[-0.01em]">{title}</h2>
           <EnsName name={record.name} className="mt-0.5 text-xs text-[#78716c]" />
         </div>
-        <span className={`shrink-0 rounded-md px-2.5 py-0.5 text-[13px] font-medium ${meta.tint} ${meta.text}`}>
+        <span className={`shrink-0 rounded-none px-2.5 py-0.5 text-[13px] font-medium ${meta.tint} ${meta.text}`}>
           {meta.glyph} {meta.label}
         </span>
       </div>

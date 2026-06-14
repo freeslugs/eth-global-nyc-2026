@@ -77,7 +77,7 @@ export default function RegisterPage() {
         <div className="text-[13px] uppercase tracking-[0.04em] text-accent">Submit a skill</div>
         <h1 className="font-display text-4xl font-semibold tracking-[-0.02em]">Publish your skills</h1>
         <p className="max-w-2xl text-[#57534e]">
-          Connect your wallet, claim your company name on ENS, and submit skills for review. Your
+          Connect your wallet, claim your organization name on ENS, and submit skills for review. Your
           wallet owns the names and pays the gas — no account, no custody.
         </p>
       </header>
@@ -252,7 +252,7 @@ function CompanyPanel({
   const [step, setStep] = useState<OrgStep>("idle");
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const fullName = `${company || "your-company"}.${ROOT}`;
+  const fullName = `${company || "your-org"}.${ROOT}`;
   const ready = Boolean(company && address && ORG_REGISTRY && !exists);
 
   // 3-tx flow: deploy subregistry → resolver → register. The proxy addresses are
@@ -353,13 +353,13 @@ function CompanyPanel({
         : step === "resolver"
           ? "Deploying resolver…"
           : step === "register"
-            ? "Registering company…"
-            : "Create company →";
+            ? "Registering organization…"
+            : "Create organization →";
 
   return (
     <section className="space-y-4 rounded-2xl border border-[#e7e5e1] bg-white p-6">
       <div>
-        <h2 className="font-display text-xl font-semibold">1 · Claim your company name</h2>
+        <h2 className="font-display text-xl font-semibold">1 · Claim your organization name</h2>
         <p className="mt-1 text-sm text-[#78716c]">
           A subname under <span className="font-mono">{ROOT}</span>, with its own subregistry +
           resolver that your wallet owns.
@@ -367,7 +367,7 @@ function CompanyPanel({
       </div>
 
       <label className="block">
-        <span className="text-sm text-[#57534e]">Company name</span>
+        <span className="text-sm text-[#57534e]">Organization name</span>
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
@@ -395,7 +395,7 @@ function CompanyPanel({
           onClick={create}
           className="rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink/90 disabled:opacity-50"
         >
-          {busy ? label3 : "Create company →"}
+          {busy ? label3 : "Create organization →"}
         </button>
       )}
 
@@ -441,7 +441,7 @@ function SubmitSkill({
   const processed = useRef<string | undefined>(undefined);
 
   const validUrl = /^https?:\/\//i.test(url);
-  const fullName = `${slug(label) || "your-skill"}.${company || "your-company"}.${ROOT}`;
+  const fullName = `${slug(label) || "your-skill"}.${company || "your-org"}.${ROOT}`;
   const node = namehash(fullName);
   const ready = Boolean(slug(label) && pin && address && exists && registry && resolver);
 
@@ -588,7 +588,7 @@ function SubmitSkill({
 
       {!exists && (
         <p className="rounded-md bg-[#faf9f7] px-3 py-2 text-xs text-[#78716c]">
-          Enter (and create) your company above first — skills publish under it.
+          Enter (and create) your organization above first — skills publish under it.
         </p>
       )}
 

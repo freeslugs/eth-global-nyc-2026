@@ -23,7 +23,7 @@ export const APP_NAV: NavGroup = {
   label: "App",
   items: [
     { href: "/registry", label: "Skills registry" },
-    { href: "/orgs", label: "Companies" },
+    { href: "/orgs", label: "Organizations" },
     { href: "/register", label: "Submit a skill" },
   ],
 };
