@@ -3,6 +3,8 @@
  * imported from @aegis/chain) so the client bundle doesn't pull in @aegis/chain's
  * node-only Ledger deps. Mirror of the verified deployment.
  */
+import { labelhash } from "viem/ens";
+
 export type Address = `0x${string}`;
 
 // Shared deployment contracts.
@@ -56,7 +58,22 @@ export const permissionedRegistryAbi = [
     inputs: [{ name: "label", type: "string" }],
     outputs: [{ type: "address" }],
   },
+  {
+    name: "ownerOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ type: "address" }],
+  },
 ] as const;
+
+/**
+ * The canonical token id for a label in a PermissionedRegistry: the labelhash
+ * with its low 32 bits (the token-version field) cleared. `ownerOf(tokenId)`
+ * takes this; `getSubregistry(label)`/`getResolver(label)` take the raw label.
+ */
+export const companyTokenId = (label: string): bigint =>
+  BigInt(labelhash(label)) & ~0xffffffffn;
 
 /** PermissionedResolver.setText — write the skill's content pin. */
 export const permissionedResolverAbi = [

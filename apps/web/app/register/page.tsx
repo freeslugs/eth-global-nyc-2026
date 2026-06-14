@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import {
   useAccount,
+  usePublicClient,
   useReadContract,
   useSwitchChain,
   useWaitForTransactionReceipt,
@@ -15,6 +15,7 @@ import { labelhash, namehash } from "viem/ens";
 import { ConnectButton } from "@/components/connect-button";
 import {
   ALL_ROLES,
+  companyTokenId,
   MAX_EXPIRY,
   ORG_REGISTRY,
   PERMISSIONED_RESOLVER_IMPL,
@@ -77,10 +78,21 @@ export default function RegisterPage() {
 }
 
 function RegisterBody() {
-  const { isConnected, chainId } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { switchChain, isPending: switching } = useSwitchChain();
   const [companyLabel, setCompanyLabel] = useState("");
   const company = slug(companyLabel);
+
+  // If this wallet already owns a company, surface it instead of an empty claim
+  // form: auto-fill the label (once) so the "company exists" flow + skill
+  // submission light up without the user having to type or re-claim it.
+  const owned = useOwnedCompanies(address);
+  const autofilled = useRef(false);
+  useEffect(() => {
+    if (autofilled.current || companyLabel || !owned || owned.length === 0) return;
+    autofilled.current = true;
+    setCompanyLabel(owned[0]!);
+  }, [owned, companyLabel]);
 
   // Look up the company's subregistry + resolver on-chain — the single source of
   // truth for "does this company exist and where do its skills live".
@@ -150,36 +162,57 @@ function RegisterBody() {
 type OrgStep = "idle" | "authorizing" | "registry" | "resolver" | "register" | "done";
 
 /**
- * The companies this wallet already owns, derived from the registry: a skill
- * `weather.acme.safeskills.eth` it owns means it owns the company `acme.…`.
- * `null` while loading so we don't flash the claim form to existing owners.
+ * The company labels this wallet actually owns on-chain. We can't enumerate the
+ * registry, so we take the candidate labels the app knows about (the orgs in
+ * /api/registry) and confirm ownership against ORG_REGISTRY.ownerOf — the real
+ * source of truth, not the mock owner in the registry payload. Returns labels
+ * like `["acme"]`; `null` while loading so callers don't act prematurely.
  */
 function useOwnedCompanies(address?: string) {
-  const [companies, setCompanies] = useState<string[] | null>(null);
+  const client = usePublicClient({ chainId: sepolia.id });
+  const [labels, setLabels] = useState<string[] | null>(null);
   useEffect(() => {
-    if (!address) {
-      setCompanies(null);
+    if (!address || !client || !ORG_REGISTRY) {
+      setLabels(address ? [] : null);
       return;
     }
     let cancelled = false;
-    fetch("/api/registry")
-      .then((r) => r.json())
-      .then((data: { skills?: { name: string; owner: string }[] }) => {
-        if (cancelled) return;
-        const mine = new Set<string>();
+    (async () => {
+      try {
+        const res = await fetch("/api/registry");
+        const data = (await res.json()) as { skills?: { name: string }[] };
+        // The org label sits just below the root: weather.acme.safeskills.eth → "acme".
+        const candidates = new Set<string>();
         for (const s of data.skills ?? []) {
-          if (s.owner?.toLowerCase() !== address.toLowerCase()) continue;
-          const labels = s.name.split(".");
-          mine.add(labels.length > 2 ? labels.slice(1).join(".") : s.name);
+          const parts = s.name.split(".");
+          if (parts.length >= 3) candidates.add(parts[parts.length - 3]!);
         }
-        setCompanies([...mine].sort());
-      })
-      .catch(() => setCompanies([]));
+        const owned: string[] = [];
+        await Promise.all(
+          [...candidates].map(async (label) => {
+            try {
+              const owner = await client.readContract({
+                address: ORG_REGISTRY as Address,
+                abi: permissionedRegistryAbi,
+                functionName: "ownerOf",
+                args: [companyTokenId(label)],
+              });
+              if (String(owner).toLowerCase() === address.toLowerCase()) owned.push(label);
+            } catch {
+              /* unregistered label → ownerOf reverts; not owned */
+            }
+          }),
+        );
+        if (!cancelled) setLabels(owned.sort());
+      } catch {
+        if (!cancelled) setLabels([]);
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [address]);
-  return companies;
+  }, [address, client]);
+  return labels;
 }
 
 function CompanyPanel({
@@ -196,7 +229,6 @@ function CompanyPanel({
   onCreated: () => void;
 }) {
   const { address } = useAccount();
-  const owned = useOwnedCompanies(address);
   const { writeContract, data: hash, error, reset } = useWriteContract();
   const { data: receipt, isSuccess } = useWaitForTransactionReceipt({ hash });
   const processed = useRef<string | undefined>(undefined);
@@ -280,43 +312,6 @@ function CompanyPanel({
           : step === "register"
             ? "Registering company…"
             : "Create company →";
-
-  // Still checking the registry — hold the slot so owners never see the form flash.
-  // (Skip while a creation is in flight so the tx progress button stays visible.)
-  if (owned === null && step === "idle") {
-    return <div className="h-40 animate-pulse rounded-2xl border border-[#e7e5e1] bg-white" />;
-  }
-
-  // This wallet already has a company name — show it instead of the claim form.
-  if (owned && owned.length > 0 && step === "idle") {
-    return (
-      <section className="space-y-3 rounded-2xl border border-[#e7e5e1] bg-white p-6">
-        <div>
-          <h2 className="font-display text-xl font-semibold">
-            1 · Your compan{owned.length === 1 ? "y" : "ies"}
-          </h2>
-          <p className="mt-1 text-sm text-[#78716c]">
-            This wallet already owns {owned.length === 1 ? "a company name" : `${owned.length} company names`}{" "}
-            on <span className="font-mono">{ROOT}</span>.
-          </p>
-        </div>
-        <ul className="space-y-2">
-          {owned.map((companyName) => (
-            <li
-              key={companyName}
-              className="flex items-center justify-between gap-3 rounded-md bg-[#faf9f7] px-3 py-2"
-            >
-              <span className="font-mono text-sm">{companyName}</span>
-              <Link href="/orgs" className="shrink-0 text-xs text-accent underline">
-                view
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <p className="text-xs text-[#a8a29e]">Publish a skill under it below.</p>
-      </section>
-    );
-  }
 
   return (
     <section className="space-y-4 rounded-2xl border border-[#e7e5e1] bg-white p-6">
