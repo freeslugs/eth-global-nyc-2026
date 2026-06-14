@@ -17,7 +17,7 @@ export default async function SkillPage({ params }: { params: Promise<{ hash: st
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-12">
       <Link
-        href="/"
+        href="/registry"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" /> Registry
