@@ -33,10 +33,19 @@ function prettyLabel(label: string): string {
     .join(" ");
 }
 
-/** Demo status badge for a discovered skill, derived from its on-chain verdict. */
+/**
+ * Status badge for a discovered skill, from its on-chain reviews. A skill is
+ * reviewed either by the legacy single `verdict` or by per-provider
+ * `attestations` — both count. Security-first: any failing review wins (poisoned)
+ * over any passing one; a passing review with no failures is verified; nothing
+ * reviewed yet is pending.
+ */
 function deriveStatus(record: SkillRecord): SkillStatus {
-  if (record.verdict?.status === "pass") return "verified";
-  if (record.verdict?.status === "fail") return "poisoned";
+  const attestations = record.attestations ?? [];
+  const failed = record.verdict?.status === "fail" || attestations.some((a) => a.status === "fail");
+  if (failed) return "poisoned";
+  const passed = record.verdict?.status === "pass" || attestations.some((a) => a.status === "pass");
+  if (passed) return "verified";
   return "pending";
 }
 
